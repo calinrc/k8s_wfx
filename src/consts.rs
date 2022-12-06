@@ -89,7 +89,7 @@ pub const FILE_ATTRIBUTE_REPARSE_POINT: c_uint = 0x00000400;
 pub const FILE_ATTRIBUTE_UNIX_MODE: c_uint = 0x80000000;
 
 pub type TProgressProc = unsafe extern "C" fn(c_int, *mut c_char, *mut c_char, c_int) -> c_int;
-pub type TLogProc = unsafe extern "C" fn(c_int, c_int, *mut c_char) -> c_void;
+pub type TLogProc = unsafe extern "C" fn(i32, i32, *mut c_char);
 pub type TRequestProc =
     unsafe extern "C" fn(c_int, c_int, *mut c_char, *mut c_char, *mut c_char, c_int) -> c_int;
 

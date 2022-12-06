@@ -8,6 +8,10 @@ edition = "2021"
 [dependencies]
 libc = "0.2.85"
 
+[build-dependencies]
+cbindgen = "0.24.3"
+
 [lib]
 name         = "k8s_wfx"
-crate-type   = ["rlib", "cdylib"]
+crate-type   = ["cdylib"]
+

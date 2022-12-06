@@ -59,16 +59,13 @@ pub unsafe extern "C" fn FsInit(
 #[no_mangle]
 pub unsafe extern "C" fn FsFindFirst(
     path: *mut c_char,
-    find_data: Option<Box<WIN32_FIND_DATAA>>,
+    find_data: *mut WIN32_FIND_DATAA,
 ) -> HANDLE {
     INVALID_HANDLE
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn FsFindNext(
-    hdl: HANDLE,
-    find_data: Option<Box<WIN32_FIND_DATAA>>,
-) -> c_int {
+pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATAA) -> c_int {
     0
 }
 
@@ -93,7 +90,7 @@ pub unsafe extern "C" fn FsRenMovFile(
     new_name: *mut c_char,
     mmove: BOOL,
     over_write: BOOL,
-    ri: Option<Box<RemoteInfoStruct>>,
+    ri: *mut RemoteInfoStruct,
 ) -> c_int {
     FS_FILE_OK
 }
@@ -103,7 +100,7 @@ pub unsafe extern "C" fn FsGetFile(
     remote_name: *mut c_char,
     local_name: *mut c_char,
     copy_flags: c_int,
-    ri: Option<Box<RemoteInfoStruct>>,
+    ri: *mut RemoteInfoStruct,
 ) -> c_int {
     FS_FILE_OK
 }
@@ -147,10 +144,14 @@ pub unsafe extern "C" fn FsDisconnect(disconnect_root: *mut c_char) -> BOOL {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn FsSetDefaultParams(dps: Option<Box<FsDefaultParamStruct>>) {}
+pub unsafe extern "C" fn FsSetDefaultParams(dps: *mut FsDefaultParamStruct) {
+    print!("FsSetDefaultParams enter");
+    print!("FsSetDefaultParams exit");
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn FsGetDefRootName(def_root_name: *mut c_char, maxlen: c_int) {
+    print!("FsGetDefRootName enter");
     let plugin_name = "k8s";
     let bytes = plugin_name.as_bytes();
     let len = bytes.len();
