@@ -127,8 +127,8 @@ pub struct RemoteInfoStruct {
 }
 
 pub struct FsDefaultParamStruct {
-    size: c_int,
-    plugin_interface_version_low: DWORD,
-    plugin_interface_version_hi: DWORD,
-    default_ini_name: [c_char; MAX_PATH],
+    pub size: c_int,
+    pub plugin_interface_version_low: DWORD,
+    pub plugin_interface_version_hi: DWORD,
+    pub default_ini_name: [c_char; MAX_PATH],
 }

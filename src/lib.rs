@@ -10,8 +10,11 @@ use consts::HANDLE;
 use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
+use std::borrow::Borrow;
 use std::ffi::CString;
-
+use std::ffi::CStr;
+use std::path::Path;
+use std::ffi::OsStr;
 use consts::BOOL;
 use std::cell::RefCell;
 use std::ffi::c_char;
@@ -41,6 +44,7 @@ pub unsafe extern "C" fn FsInit(
     p_log_proc: TLogProc,
     p_request_proc: TRequestProc,
 ) -> c_int {
+    eprintln!("FsInit enter");
     G_PLUGIN_NO.with(|plug_no| {
         *plug_no.borrow_mut() = Some(plugin_nr);
     });
@@ -60,8 +64,9 @@ pub unsafe extern "C" fn FsInit(
             logger(plugin_nr, 0, ptr);
             let _ = CString::from_raw(ptr as *mut _);
         }
-        None => println!("FsInit local"),
+        None => eprintln!("FsInit local"),
     });
+    eprintln!("FsInit exit");
 
     0
 }
@@ -71,36 +76,43 @@ pub unsafe extern "C" fn FsFindFirst(
     path: *mut c_char,
     find_data: *mut WIN32_FIND_DATAA,
 ) -> HANDLE {
-    print!("FsFindFirst enter");
-    print!("FsFindFirst exit");
+    eprintln!("FsFindFirst enter");
+    let path_str = CStr::from_ptr( path).to_string_lossy();
+    eprintln!("FsFindFirst on path {}", path_str);
+    let path = Path::new(path_str.as_ref());
+    let parent = path.parent();
+    eprintln!("Parent is none {}", parent.is_none());
+
+
+    eprintln!("FsFindFirst exit");
     INVALID_HANDLE
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATAA) -> c_int {
-    print!("FsFindNext enter");
-    print!("FsFindNext exit");
+    eprintln!("FsFindNext enter");
+    eprintln!("FsFindNext exit");
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
-    print!("FsFindClose enter");
-    print!("FsFindClose exit");
+    eprintln!("FsFindClose enter");
+    eprintln!("FsFindClose exit");
     FS_FILE_OK
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsMkDir(path: *mut c_char) -> BOOL {
-    print!("FsMkDir enter");
-    print!("FsMkDir exit");
+    eprintln!("FsMkDir enter");
+    eprintln!("FsMkDir exit");
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsRemoveDir(remote_name: *mut c_char) -> BOOL {
-    print!("FsRemoveDir enter");
-    print!("FsRemoveDir exit");
+    eprintln!("FsRemoveDir enter");
+    eprintln!("FsRemoveDir exit");
     0
 }
 
@@ -112,8 +124,8 @@ pub unsafe extern "C" fn FsRenMovFile(
     over_write: BOOL,
     ri: *mut RemoteInfoStruct,
 ) -> c_int {
-    print!("FsRenMovFile enter");
-    print!("FsRenMovFile exit");
+    eprintln!("FsRenMovFile enter");
+    eprintln!("FsRenMovFile exit");
     FS_FILE_OK
 }
 
@@ -124,8 +136,8 @@ pub unsafe extern "C" fn FsGetFile(
     copy_flags: c_int,
     ri: *mut RemoteInfoStruct,
 ) -> c_int {
-    print!("FsGetFile enter");
-    print!("FsGetFile exit");
+    eprintln!("FsGetFile enter");
+    eprintln!("FsGetFile exit");
     FS_FILE_OK
 }
 
@@ -135,8 +147,8 @@ pub unsafe extern "C" fn FsPutFile(
     remote_name: *mut c_char,
     copy_flags: c_int,
 ) -> c_int {
-    print!("FsPutFile enter");
-    print!("FsPutFile exit");
+    eprintln!("FsPutFile enter");
+    eprintln!("FsPutFile exit");
     FS_FILE_OK
 }
 
@@ -146,15 +158,15 @@ pub unsafe extern "C" fn FsExecuteFile(
     remote_name: *mut c_char,
     verb: *mut c_char,
 ) -> c_int {
-    print!("FsExecuteFile enter");
-    print!("FsExecuteFile exit");
+    eprintln!("FsExecuteFile enter");
+    eprintln!("FsExecuteFile exit");
     FS_EXEC_OK
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsDeleteFile(remote_name: *mut c_char) -> BOOL {
-    print!("FsDeleteFile enter");
-    print!("FsDeleteFile exit");
+    eprintln!("FsDeleteFile enter");
+    eprintln!("FsDeleteFile exit");
     0
 }
 
@@ -165,27 +177,34 @@ pub unsafe extern "C" fn FsSetTime(
     last_access_time: *mut FILETIME,
     last_write_time: *mut FILETIME,
 ) -> BOOL {
-    print!("FsSetTime enter");
-    print!("FsSetTime exit");
+    eprintln!("FsSetTime enter");
+    eprintln!("FsSetTime exit");
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsDisconnect(disconnect_root: *mut c_char) -> BOOL {
-    print!("FsDisconnect enter");
-    print!("FsDisconnect exit");
+    eprintln!("FsDisconnect enter");
+    eprintln!("FsDisconnect exit");
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsSetDefaultParams(dps: *mut FsDefaultParamStruct) {
-    print!("FsSetDefaultParams enter");
-    print!("FsSetDefaultParams exit");
+    eprintln!("FsSetDefaultParams enter");
+    let str = CStr::from_ptr( (*dps).default_ini_name.as_ptr()).to_string_lossy();
+
+    eprintln!("FsSetDefaultParams  {} version {}:{} size {}", 
+    str, 
+    (*dps).plugin_interface_version_hi, 
+    (*dps).plugin_interface_version_low, 
+    (*dps).size);
+    eprintln!("FsSetDefaultParams exit");
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsGetDefRootName(def_root_name: *mut c_char, maxlen: c_int) {
-    print!("FsGetDefRootName enter");
+    eprintln!("FsGetDefRootName enter");
     let plugin_name = "k8s";
     let bytes = plugin_name.as_bytes();
     let len = bytes.len();
@@ -195,7 +214,7 @@ pub unsafe extern "C" fn FsGetDefRootName(def_root_name: *mut c_char, maxlen: c_
         maxlen as usize,
     );
     std::ptr::write(def_root_name.offset(len as isize) as *mut u8, 0u8);
-    print!("FsGetDefRootName exit");
+    eprintln!("FsGetDefRootName exit");
 }
 
 pub fn add(left: usize, right: usize) -> usize {
