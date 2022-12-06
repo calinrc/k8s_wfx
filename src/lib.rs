@@ -10,6 +10,7 @@ use consts::HANDLE;
 use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
+use std::ffi::CString;
 
 use consts::BOOL;
 use std::cell::RefCell;
@@ -52,6 +53,15 @@ pub unsafe extern "C" fn FsInit(
     G_REQUEST_PROC.with(|funcptr| {
         *funcptr.borrow_mut() = Some(p_request_proc);
     });
+    G_LOG_PROC.with(|logger_opt| match *logger_opt.borrow() {
+        Some(logger) => {
+            let c_string = CString::new("FsInit logger").expect("CString::new failed");
+            let ptr = c_string.into_raw();
+            logger(plugin_nr, 0, ptr);
+            let _ = CString::from_raw(ptr as *mut _);
+        }
+        None => println!("FsInit local"),
+    });
 
     0
 }
@@ -61,26 +71,36 @@ pub unsafe extern "C" fn FsFindFirst(
     path: *mut c_char,
     find_data: *mut WIN32_FIND_DATAA,
 ) -> HANDLE {
+    print!("FsFindFirst enter");
+    print!("FsFindFirst exit");
     INVALID_HANDLE
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATAA) -> c_int {
+    print!("FsFindNext enter");
+    print!("FsFindNext exit");
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
+    print!("FsFindClose enter");
+    print!("FsFindClose exit");
     FS_FILE_OK
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsMkDir(path: *mut c_char) -> BOOL {
+    print!("FsMkDir enter");
+    print!("FsMkDir exit");
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsRemoveDir(remote_name: *mut c_char) -> BOOL {
+    print!("FsRemoveDir enter");
+    print!("FsRemoveDir exit");
     0
 }
 
@@ -92,6 +112,8 @@ pub unsafe extern "C" fn FsRenMovFile(
     over_write: BOOL,
     ri: *mut RemoteInfoStruct,
 ) -> c_int {
+    print!("FsRenMovFile enter");
+    print!("FsRenMovFile exit");
     FS_FILE_OK
 }
 
@@ -102,6 +124,8 @@ pub unsafe extern "C" fn FsGetFile(
     copy_flags: c_int,
     ri: *mut RemoteInfoStruct,
 ) -> c_int {
+    print!("FsGetFile enter");
+    print!("FsGetFile exit");
     FS_FILE_OK
 }
 
@@ -111,6 +135,8 @@ pub unsafe extern "C" fn FsPutFile(
     remote_name: *mut c_char,
     copy_flags: c_int,
 ) -> c_int {
+    print!("FsPutFile enter");
+    print!("FsPutFile exit");
     FS_FILE_OK
 }
 
@@ -120,11 +146,15 @@ pub unsafe extern "C" fn FsExecuteFile(
     remote_name: *mut c_char,
     verb: *mut c_char,
 ) -> c_int {
+    print!("FsExecuteFile enter");
+    print!("FsExecuteFile exit");
     FS_EXEC_OK
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsDeleteFile(remote_name: *mut c_char) -> BOOL {
+    print!("FsDeleteFile enter");
+    print!("FsDeleteFile exit");
     0
 }
 
@@ -135,11 +165,15 @@ pub unsafe extern "C" fn FsSetTime(
     last_access_time: *mut FILETIME,
     last_write_time: *mut FILETIME,
 ) -> BOOL {
+    print!("FsSetTime enter");
+    print!("FsSetTime exit");
     0
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsDisconnect(disconnect_root: *mut c_char) -> BOOL {
+    print!("FsDisconnect enter");
+    print!("FsDisconnect exit");
     0
 }
 
@@ -161,6 +195,7 @@ pub unsafe extern "C" fn FsGetDefRootName(def_root_name: *mut c_char, maxlen: c_
         maxlen as usize,
     );
     std::ptr::write(def_root_name.offset(len as isize) as *mut u8, 0u8);
+    print!("FsGetDefRootName exit");
 }
 
 pub fn add(left: usize, right: usize) -> usize {
