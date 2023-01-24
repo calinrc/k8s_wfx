@@ -10,17 +10,19 @@ use consts::HANDLE;
 use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use std::borrow::Borrow;
 use std::ffi::CString;
 use std::ffi::CStr;
 use std::path::Path;
-use std::ffi::OsStr;
 use consts::BOOL;
 use std::cell::RefCell;
 use std::ffi::c_char;
 use std::ffi::c_int;
+use tracing::*;
+
 
 mod consts;
+mod resoures;
+mod pods;
 
 // File: lib.rs
 
@@ -66,6 +68,7 @@ pub unsafe extern "C" fn FsInit(
         }
         None => eprintln!("FsInit local"),
     });
+    tracing_subscriber::fmt::init();
     eprintln!("FsInit exit");
 
     0

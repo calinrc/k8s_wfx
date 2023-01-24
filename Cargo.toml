@@ -7,8 +7,27 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2.85"
-kube = { version = "0.76.0", features = ["runtime", "derive"] }
-k8s-openapi = { version = "0.16.0", features = ["v1_25"] }
+kube = { version = "0.78.0", default-features = false, features = ["client", "rustls-tls"] }
+k8s-openapi = { version = "0.17.0", features = ["v1_26"] }
+tracing = "0.1.36"
+tracing-subscriber = "0.3.3"
+futures = "0.3"
+anyhow = "1.0.44"
+tokio = { version = "1.14.0", features = ["full"] }
+tower = { version = "0.4.6", features = ["limit"] }
+tower-http = { version = "0.3.2", features = ["trace", "decompression-gzip"] }
+hyper = { version = "0.14.13", features = ["client", "http1", "stream", "tcp"] }
+
+
+[features]
+default = ["openssl-tls", "rustls-tls", "kubederive", "ws", "latest", "runtime"]
+kubederive = ["kube/derive"]
+openssl-tls = ["kube/client", "kube/openssl-tls"]
+rustls-tls = ["kube/client", "kube/rustls-tls"]
+runtime = ["kube/runtime"]
+ws = ["kube/ws"]
+latest = ["k8s-openapi/v1_26"]
+
 
 [build-dependencies]
 cbindgen = "0.24.3"
