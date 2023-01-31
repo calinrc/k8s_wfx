@@ -98,6 +98,8 @@ pub type HWND = HANDLE;
 pub const INVALID_HANDLE: HANDLE = -1isize as HANDLE; // {0xffffffffffffffff as *mut core::ffi::c_void}
 
 pub type DWORD = c_uint;
+
+#[repr(C)]
 pub struct FILETIME {
     dw_low_date_time: DWORD,
     dw_high_date_time: DWORD,
@@ -106,11 +108,12 @@ pub struct FILETIME {
 pub const MAX_PATH: usize = 260;
 pub type BOOL = c_uint;
 
+#[repr(C)]
 pub struct WIN32_FIND_DATAA {
     dw_file_attributes: DWORD,
     ft_creation_time: FILETIME,
     ft_last_access_time: FILETIME,
-    ft_last_write_wime: FILETIME,
+    ft_last_write_time: FILETIME,
     n_file_size_high: DWORD,
     n_file_size_low: DWORD,
     dw_reserved_0: DWORD,
@@ -119,6 +122,7 @@ pub struct WIN32_FIND_DATAA {
     c_alternate_file_name: [c_char; 14],
 }
 
+#[repr(C)]
 pub struct RemoteInfoStruct {
     size_low: DWORD,
     size_high: DWORD,
@@ -126,6 +130,7 @@ pub struct RemoteInfoStruct {
     attr: c_int,
 }
 
+#[repr(C)]
 pub struct FsDefaultParamStruct {
     pub size: c_int,
     pub plugin_interface_version_low: DWORD,

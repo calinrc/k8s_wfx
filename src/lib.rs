@@ -18,11 +18,12 @@ use std::cell::RefCell;
 use std::ffi::c_char;
 use std::ffi::c_int;
 use tracing::*;
-
+use iterator::ResourcesIterator;
 
 mod consts;
-mod resoures;
+mod resources;
 mod pods;
+mod iterator;
 
 // File: lib.rs
 
@@ -85,8 +86,8 @@ pub unsafe extern "C" fn FsFindFirst(
     let path = Path::new(path_str.as_ref());
     let parent = path.parent();
     eprintln!("Parent is none {}", parent.is_none());
-
-
+    let _rit = ResourcesIterator::new();
+    
     eprintln!("FsFindFirst exit");
     INVALID_HANDLE
 }

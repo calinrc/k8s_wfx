@@ -31,7 +31,7 @@ typedef int (*FsFindClose_func)(HANDLE Hdl);
 HANDLE INVALID_HANDLE = (HANDLE)-1;
 
 #ifdef LINUX
-#define LIB_REL_PATH "/target/debug/k8s.wfx"
+#define LIB_REL_PATH "../../target/debug/libk8s_wfx.so" // k8s.wfx
 #else
 #define LIB_REL_PATH "..\\target\\debug\\k8s.wfx"
 #endif
@@ -50,7 +50,8 @@ int main()
     memset(lib_path, 0, sizeof(lib_path));
     char *userHomeDir = Utilities::getUserHomeDir();
     // sprintf(lib_path, "%s", LIB_REL_PATH);
-    sprintf(lib_path, "%s%s", userHomeDir, LIB_REL_PATH);
+    //sprintf(lib_path, "%s%s", userHomeDir, LIB_REL_PATH);
+    strcpy(lib_path, LIB_REL_PATH);
     delete[] userHomeDir;
 
     LIB_HANDLER handle = LOAD_LIB(lib_path, RTLD_LAZY);

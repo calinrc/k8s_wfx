@@ -5,6 +5,7 @@ use core::future::Future;
 use crate::pods;
 
 
+#[derive(Debug)]
 pub enum K8SResources {
     ConfigMap,
     Endpoint,
