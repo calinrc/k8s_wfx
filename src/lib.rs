@@ -87,7 +87,7 @@ pub unsafe extern "C" fn FsFindFirst(
     let parent = path.parent();
     eprintln!("Parent is none {}", parent.is_none());
     let _rit = ResourcesIterator::new();
-    
+    _rit.update_find_data(find_data);
     eprintln!("FsFindFirst exit");
     INVALID_HANDLE
 }
