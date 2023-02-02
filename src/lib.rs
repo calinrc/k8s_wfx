@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use consts::FsDefaultParamStruct;
 use consts::RemoteInfoStruct;
 use consts::TLogProc;
@@ -19,6 +20,7 @@ use std::ffi::c_char;
 use std::ffi::c_int;
 use tracing::*;
 use iterator::ResourcesIterator;
+use std::mem::ManuallyDrop;
 
 mod consts;
 mod resources;
@@ -86,10 +88,19 @@ pub unsafe extern "C" fn FsFindFirst(
     let path = Path::new(path_str.as_ref());
     let parent = path.parent();
     eprintln!("Parent is none {}", parent.is_none());
-    let _rit = ResourcesIterator::new();
-    _rit.update_find_data(find_data);
+    let mut rit = ResourcesIterator::new();
+    let it = rit.iterator();
+    let handle = match it.next(){
+        Some(next_elem) => {let mut rit = ManuallyDrop::new(rit);
+                                            ResourcesIterator::update_find_data(find_data, next_elem);
+                                            &mut rit as *mut _ as HANDLE
+        },
+        None => INVALID_HANDLE,
+    };
+    
+
     eprintln!("FsFindFirst exit");
-    INVALID_HANDLE
+    handle
 }
 
 #[no_mangle]

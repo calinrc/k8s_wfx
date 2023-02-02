@@ -1,6 +1,7 @@
 use crate::resources;
 use std::slice::Iter;
 use crate::WIN32_FIND_DATAA;
+use core::ffi::CStr;
 
 #[derive(Debug)]
 pub struct ResourcesIterator{
@@ -16,7 +17,12 @@ impl ResourcesIterator{
         }
     }
 
-    pub fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
+    pub fn iterator(&mut self) -> &mut std::slice::Iter<'static, resources::K8SResources>{
+        &mut self.it
+    }
 
+    pub fn update_find_data( find_data: *mut WIN32_FIND_DATAA, res: &resources::K8SResources) {
+        println!("K8SResources {}", res)
+        
     }
 }

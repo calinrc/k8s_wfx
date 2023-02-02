@@ -36,3 +36,9 @@ cbindgen = "0.24.3"
 name         = "k8s_wfx"
 crate-type   = ["cdylib"]
 
+
+
+[[bin]]
+name = "k8s_bin"
+path = "src/main.rs"
+

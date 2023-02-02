@@ -99,35 +99,51 @@ pub const INVALID_HANDLE: HANDLE = -1isize as HANDLE; // {0xffffffffffffffff as 
 
 pub type DWORD = c_uint;
 
+#[derive(Default)]
 #[repr(C)]
 pub struct FILETIME {
-    dw_low_date_time: DWORD,
-    dw_high_date_time: DWORD,
+    pub dw_low_date_time: DWORD,
+    pub dw_high_date_time: DWORD,
+}
+
+impl FILETIME{
+    pub fn new()->Self {
+        Self { dw_low_date_time: 0, 
+            dw_high_date_time: 0 }
+    }
+
+    pub fn default()->Self {
+        Self { dw_low_date_time: 0, 
+            dw_high_date_time: 0 }
+    }
+
 }
 
 pub const MAX_PATH: usize = 260;
 pub type BOOL = c_uint;
 
-#[repr(C)]
+// #[repr(C)]
+
+#[repr(C, packed)]
 pub struct WIN32_FIND_DATAA {
-    dw_file_attributes: DWORD,
-    ft_creation_time: FILETIME,
-    ft_last_access_time: FILETIME,
-    ft_last_write_time: FILETIME,
-    n_file_size_high: DWORD,
-    n_file_size_low: DWORD,
-    dw_reserved_0: DWORD,
-    dw_reserved_1: DWORD,
-    c_file_name: [c_char; MAX_PATH],
-    c_alternate_file_name: [c_char; 14],
+    pub dw_file_attributes: DWORD,
+    pub ft_creation_time: FILETIME,
+    pub ft_last_access_time: FILETIME,
+    pub ft_last_write_time: FILETIME,
+    pub n_file_size_high: DWORD,
+    pub n_file_size_low: DWORD,
+    pub dw_reserved_0: DWORD,
+    pub dw_reserved_1: DWORD,
+    pub c_file_name: [c_char; MAX_PATH],
+    pub c_alternate_file_name: [c_char; 14],
 }
 
 #[repr(C)]
 pub struct RemoteInfoStruct {
-    size_low: DWORD,
-    size_high: DWORD,
-    last_write_time: FILETIME,
-    attr: c_int,
+    pub size_low: DWORD,
+    pub size_high: DWORD,
+    pub last_write_time: FILETIME,
+    pub attr: c_int,
 }
 
 #[repr(C)]
