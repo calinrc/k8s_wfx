@@ -4,6 +4,7 @@ use consts::RemoteInfoStruct;
 use consts::TLogProc;
 use consts::TProgressProc;
 use consts::TRequestProc;
+use consts::BOOL;
 use consts::FILETIME;
 use consts::FS_EXEC_OK;
 use consts::FS_FILE_OK;
@@ -11,21 +12,20 @@ use consts::HANDLE;
 use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use std::ffi::CString;
-use std::ffi::CStr;
-use std::path::Path;
-use consts::BOOL;
+use iterator::ResourcesIterator;
 use std::cell::RefCell;
 use std::ffi::c_char;
 use std::ffi::c_int;
-use tracing::*;
-use iterator::ResourcesIterator;
+use std::ffi::CStr;
+use std::ffi::CString;
 use std::mem::ManuallyDrop;
+use std::path::Path;
+use tracing::*;
 
 mod consts;
-mod resources;
-mod pods;
 mod iterator;
+mod pods;
+mod resources;
 
 // File: lib.rs
 
@@ -83,22 +83,22 @@ pub unsafe extern "C" fn FsFindFirst(
     find_data: *mut WIN32_FIND_DATAA,
 ) -> HANDLE {
     eprintln!("FsFindFirst enter");
-    let path_str = CStr::from_ptr( path).to_string_lossy();
+    let path_str = CStr::from_ptr(path).to_string_lossy();
     eprintln!("FsFindFirst on path {}", path_str);
     let path = Path::new(path_str.as_ref());
     let parent = path.parent();
     eprintln!("Parent is none {}", parent.is_none());
-    let mut rit = ResourcesIterator::new();
-    let it = rit.iterator();
-    let handle = match it.next(){
-        Some(next_elem) => {let mut rit = ManuallyDrop::new(rit);
-                                            ResourcesIterator::update_find_data(find_data, next_elem);
-                                            &mut rit as *mut _ as HANDLE
-        },
+    let mut rit = Box::new(ResourcesIterator::new());
+    let it = (*rit).iterator();
+
+    let handle = match it.next() {
+        Some(next_elem) => {
+            let mut mbrit = ManuallyDrop::new(rit);
+            ResourcesIterator::update_find_data(find_data, next_elem);
+            &mut mbrit as *mut _ as HANDLE
+        }
         None => INVALID_HANDLE,
     };
-    
-
     eprintln!("FsFindFirst exit");
     handle
 }
@@ -106,13 +106,36 @@ pub unsafe extern "C" fn FsFindFirst(
 #[no_mangle]
 pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATAA) -> c_int {
     eprintln!("FsFindNext enter");
+    let ret_val: c_int = {
+        if hdl != INVALID_HANDLE {
+            let riit: &mut ManuallyDrop<Box<ResourcesIterator>> = unsafe { &mut *(hdl as *mut ManuallyDrop<Box<ResourcesIterator>>) };
+            //as *mut ResourcesIterator;
+            let it = (*riit).iterator();
+            match it.next() {
+                Some(next_elem) => {
+                    ResourcesIterator::update_find_data(find_data, next_elem);
+                    1
+                }
+                None => {
+                    println!("None elem");
+                    0
+                }
+            }
+        } else {
+            0
+        }
+    };
+
     eprintln!("FsFindNext exit");
-    0
+    ret_val
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
     eprintln!("FsFindClose enter");
+    //let riit: &mut ResourcesIterator = unsafe { &mut *(hdl as *mut ResourcesIterator) };
+//    let mdrit: &mut ManuallyDrop<ResourcesIterator> = unsafe { &mut *(hdl as *mut ManuallyDrop<ResourcesIterator>) };
+//    ManuallyDrop::into_inner(&mdrit);
     eprintln!("FsFindClose exit");
     FS_FILE_OK
 }
@@ -207,13 +230,15 @@ pub unsafe extern "C" fn FsDisconnect(disconnect_root: *mut c_char) -> BOOL {
 #[no_mangle]
 pub unsafe extern "C" fn FsSetDefaultParams(dps: *mut FsDefaultParamStruct) {
     eprintln!("FsSetDefaultParams enter");
-    let str = CStr::from_ptr( (*dps).default_ini_name.as_ptr()).to_string_lossy();
+    let str = CStr::from_ptr((*dps).default_ini_name.as_ptr()).to_string_lossy();
 
-    eprintln!("FsSetDefaultParams  {} version {}:{} size {}", 
-    str, 
-    (*dps).plugin_interface_version_hi, 
-    (*dps).plugin_interface_version_low, 
-    (*dps).size);
+    eprintln!(
+        "FsSetDefaultParams  {} version {}:{} size {}",
+        str,
+        (*dps).plugin_interface_version_hi,
+        (*dps).plugin_interface_version_low,
+        (*dps).size
+    );
     eprintln!("FsSetDefaultParams exit");
 }
 

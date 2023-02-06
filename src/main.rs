@@ -1,20 +1,19 @@
-use iterator::ResourcesIterator;
-use std::mem::ManuallyDrop;
-use std::mem::MaybeUninit;
+use consts::FILETIME;
 use consts::HANDLE;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use consts::FILETIME;
-
+use iterator::ResourcesIterator;
+use std::mem::ManuallyDrop;
+use std::mem::MaybeUninit;
 
 mod consts;
-mod resources;
-mod pods;
 mod iterator;
+mod pods;
+mod resources;
 
-fn main(){
+fn main() {
     println!("Start");
-    let mut find_data:WIN32_FIND_DATAA = WIN32_FIND_DATAA{
+    let mut find_data: WIN32_FIND_DATAA = WIN32_FIND_DATAA {
         // unsafe {
         //     MaybeUninit::zeroed().assume_init()
         // };
@@ -26,34 +25,35 @@ fn main(){
         n_file_size_low: 0,
         dw_reserved_0: 0,
         dw_reserved_1: 0,
-        c_file_name: [0i8;260],
-        c_alternate_file_name: [0i8;14],
+        c_file_name: [0i8; 260],
+        c_alternate_file_name: [0i8; 14],
     };
 
     let mut rit = ResourcesIterator::new();
     let it = rit.iterator();
-    let handle = {
-        let handle = match it.next(){
-            Some(next_elem) => {let mut rit = ManuallyDrop::new(rit);
-                                                ResourcesIterator::update_find_data(&mut find_data, next_elem);
-                                                &mut rit as *mut _ as HANDLE
-            },
-            None => INVALID_HANDLE,
+    unsafe {
+        let handle = {
+            let handle = match it.next() {
+                Some(next_elem) => {
+                    let mut rit = ManuallyDrop::new(rit);
+                    ResourcesIterator::update_find_data(&mut find_data, next_elem);
+                    &mut rit as *mut _ as HANDLE
+                }
+                None => INVALID_HANDLE,
+            };
+            handle
         };
-        handle
-    };
-    if handle != INVALID_HANDLE {
-        let riit: &mut ResourcesIterator = unsafe { &mut *(handle as *mut ResourcesIterator) };
-        //as *mut ResourcesIterator;
-        let it = riit.iterator();
-        match it.next() {
-            Some(next_elem) => {
-                ResourcesIterator::update_find_data(&mut find_data, next_elem);
-                },
+        if handle != INVALID_HANDLE {
+            let riit: &mut ResourcesIterator = unsafe { &mut *(handle as *mut ResourcesIterator) };
+            //as *mut ResourcesIterator;
+            let it = riit.iterator();
+            match it.next() {
+                Some(next_elem) => {
+                    ResourcesIterator::update_find_data(&mut find_data, next_elem);
+                }
                 None => println!("None elem"),
+            }
         }
-
     }
     println!("End");
-
 }
