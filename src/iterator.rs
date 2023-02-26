@@ -12,9 +12,15 @@ pub struct ResourcesIterator{
 }
 
 
+impl Drop for ResourcesIterator {
+    fn drop(&mut self) {
+        println!("Drop ResourcesIterator")
+    }
+}
+
 impl ResourcesIterator{
 
-    pub fn new() -> Self {
+     pub fn new() -> Self {
         Self{
             it : Box::new(resources::K8SResources::iterator()),
             id : 123

@@ -93,9 +93,12 @@ pub unsafe extern "C" fn FsFindFirst(
 
     let handle = match it.next() {
         Some(next_elem) => {
-            let mut mbrit = ManuallyDrop::new(rit);
+            // Thin pointer
+            let thin_ptr = Box::new(rit);
+            let mut mbrit = Box::into_raw(thin_ptr);
+            //let mut mbrit = ManuallyDrop::new(rit);
             ResourcesIterator::update_find_data(find_data, next_elem);
-            &mut mbrit as *mut _ as HANDLE
+             mbrit as *mut _ as HANDLE
         }
         None => INVALID_HANDLE,
     };
@@ -108,9 +111,11 @@ pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATA
     eprintln!("FsFindNext enter");
     let ret_val: c_int = {
         if hdl != INVALID_HANDLE {
-            let riit: &mut ManuallyDrop<Box<ResourcesIterator>> = unsafe { &mut *(hdl as *mut ManuallyDrop<Box<ResourcesIterator>>) };
+            let mut riit = hdl as *mut Box<ResourcesIterator>);
+             //= hdl as *mut Box<ResourcesIterator>;
+            //let mut riit: ManuallyDrop<Box<ResourcesIterator>> = unsafe { (hdl as ManuallyDrop<Box<ResourcesIterator>>) };
             //as *mut ResourcesIterator;
-            let it = (*riit).iterator();
+            let it = riit.iterator();
             match it.next() {
                 Some(next_elem) => {
                     ResourcesIterator::update_find_data(find_data, next_elem);
@@ -136,6 +141,9 @@ pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
     //let riit: &mut ResourcesIterator = unsafe { &mut *(hdl as *mut ResourcesIterator) };
 //    let mdrit: &mut ManuallyDrop<ResourcesIterator> = unsafe { &mut *(hdl as *mut ManuallyDrop<ResourcesIterator>) };
 //    ManuallyDrop::into_inner(&mdrit);
+    if hdl != INVALID_HANDLE {
+        let mut riit = Box::from_raw(hdl as *mut Box<ResourcesIterator>);
+    }
     eprintln!("FsFindClose exit");
     FS_FILE_OK
 }

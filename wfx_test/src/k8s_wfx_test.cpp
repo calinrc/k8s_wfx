@@ -31,7 +31,7 @@ typedef int (*FsFindClose_func)(HANDLE Hdl);
 HANDLE INVALID_HANDLE = (HANDLE)-1;
 
 #ifdef LINUX
-#define LIB_REL_PATH "../../target/debug/libk8s_wfx.so" // k8s.wfx
+#define LIB_REL_PATH "./target/debug/libk8s_wfx.so"
 #else
 #define LIB_REL_PATH "..\\target\\debug\\k8s.wfx"
 #endif

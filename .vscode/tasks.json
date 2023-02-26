@@ -9,10 +9,12 @@
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${workspaceFolder}/target/wfx_test/${fileBasenameNoExtension}",
+                "-I",
+                "${workspaceFolder}/wfx_test/include",
             ],
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"
