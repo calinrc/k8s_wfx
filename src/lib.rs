@@ -111,11 +111,11 @@ pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATA
     eprintln!("FsFindNext enter");
     let ret_val: c_int = {
         if hdl != INVALID_HANDLE {
-            let mut riit = hdl as *mut Box<ResourcesIterator>);
+            let mut riit = hdl as *mut Box<ResourcesIterator>;
              //= hdl as *mut Box<ResourcesIterator>;
             //let mut riit: ManuallyDrop<Box<ResourcesIterator>> = unsafe { (hdl as ManuallyDrop<Box<ResourcesIterator>>) };
             //as *mut ResourcesIterator;
-            let it = riit.iterator();
+            let it = (*riit).iterator();
             match it.next() {
                 Some(next_elem) => {
                     ResourcesIterator::update_find_data(find_data, next_elem);
@@ -142,7 +142,7 @@ pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
 //    let mdrit: &mut ManuallyDrop<ResourcesIterator> = unsafe { &mut *(hdl as *mut ManuallyDrop<ResourcesIterator>) };
 //    ManuallyDrop::into_inner(&mdrit);
     if hdl != INVALID_HANDLE {
-        let mut riit = Box::from_raw(hdl as *mut Box<ResourcesIterator>);
+        let _ = Box::from_raw(hdl as *mut Box<ResourcesIterator>);
     }
     eprintln!("FsFindClose exit");
     FS_FILE_OK
