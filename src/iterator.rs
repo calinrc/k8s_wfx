@@ -3,60 +3,100 @@ use std::slice::Iter;
 use crate::consts::WIN32_FIND_DATAA;
 use crate::consts::FILETIME;
 use crate::consts;
-use core::ffi::CStr;
+use std::path::Path;
+
 
 #[derive(Debug)]
-pub struct ResourcesIterator{
+pub struct ReasourceData {
+
+}
+
+pub trait FindDataUpdater{
+    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA);
+}
+
+#[derive(Debug)]
+pub struct ResourcesIterator<'a>{
+    
     it: Box<Iter<'static, resources::K8SResources>>,
-    id:u32
+    next_elem : Option<&'a resources::K8SResources>,
+
+}
+
+impl Iterator for ResourcesIterator<'_>{
+    type Item = ReasourceData;
+    fn next(&mut self) -> Option<ReasourceData> {
+        let result = self.it.next();
+        self.next_elem = result;
+
+        if self.next_elem.is_none(){
+            None
+        }
+        else{
+            Some(ReasourceData{})
+        }
+    }   
 }
 
 
-impl Drop for ResourcesIterator {
+impl Drop for ResourcesIterator<'_> {
     fn drop(&mut self) {
         println!("Drop ResourcesIterator")
     }
 }
 
-impl ResourcesIterator{
 
-     pub fn new() -> Self {
+
+impl ResourcesIterator<'_>{
+
+     pub fn new(path: &Path) -> Self {
         Self{
             it : Box::new(resources::K8SResources::iterator()),
-            id : 123
+            next_elem: None
+
         }
     }
 
-    pub fn iterator(&mut self) -> &mut std::slice::Iter<'static, resources::K8SResources>{
-        &mut *(self.it)
-    }
+    // pub fn iterator(&mut self) -> &mut std::slice::Iter<'static, resources::K8SResources>{
+    //     &mut *(self.it)
+    // }
 
-    pub unsafe fn update_find_data( find_data: *mut WIN32_FIND_DATAA, res: &resources::K8SResources) {
+}
+
+impl FindDataUpdater for ResourcesIterator<'_>{
+
+    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
+        match self.next_elem {
+            Some(res) => {
+                (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE | consts::FILE_ATTRIBUTE_DIRECTORY;
+                (*find_data).ft_creation_time = FILETIME::default();
+                (*find_data).ft_last_access_time =  FILETIME::default();
+                (*find_data).ft_last_write_time =  FILETIME::default();
+                (*find_data).n_file_size_high =  0;
+                (*find_data).n_file_size_low =  0;
+                (*find_data).dw_reserved_0= 0;
+                (*find_data).dw_reserved_1= 0;
+                let res_str = res.to_string();
+                let bytes =res_str.as_bytes();
+                let len = bytes.len();
         
-        (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE | consts::FILE_ATTRIBUTE_DIRECTORY;
-;
-        (*find_data).ft_creation_time = FILETIME::default();
-        (*find_data).ft_last_access_time =  FILETIME::default();
-        (*find_data).ft_last_write_time =  FILETIME::default();
-        (*find_data).n_file_size_high =  0;
-        (*find_data).n_file_size_low =  0;
-        (*find_data).dw_reserved_0= 0;
-        (*find_data).dw_reserved_1= 0;
-        let res_str = res.to_string();
-        let bytes =res_str.as_bytes();
-        let len = bytes.len();
+                std::ptr::copy(
+                    bytes.as_ptr().cast(),
+                    (*find_data).c_file_name.as_mut_ptr(),
+                    consts::MAX_PATH,
+                );
+                std::ptr::write((*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8, 0u8);
+        
+                //(*find_data).c_file_name= [0i8;260];
+                (*find_data).c_alternate_file_name =  [0i8;14];
+            
+                println!("K8SResources {}", res)
+            }
+            None => {
+                eprint!("Unable to update_find_data. None resource")
 
-        std::ptr::copy(
-            bytes.as_ptr().cast(),
-            (*find_data).c_file_name.as_mut_ptr(),
-            consts::MAX_PATH,
-        );
-        std::ptr::write((*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8, 0u8);
-
-        //(*find_data).c_file_name= [0i8;260];
-        (*find_data).c_alternate_file_name =  [0i8;14];
-    
-        println!("K8SResources {}", res)
+            }
+        }
         
     }
 }

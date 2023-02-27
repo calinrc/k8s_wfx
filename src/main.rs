@@ -3,8 +3,8 @@ use consts::HANDLE;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
 use iterator::ResourcesIterator;
-use std::mem::ManuallyDrop;
-use std::mem::MaybeUninit;
+use iterator::FindDataUpdater;
+use std::path::Path;
 
 mod consts;
 mod iterator;
@@ -29,14 +29,12 @@ fn main() {
         c_alternate_file_name: [0i8; 14],
     };
 
-    let mut rit = ResourcesIterator::new();
-    let it = rit.iterator();
+    let mut rit = ResourcesIterator::new( Path::new(""));
     unsafe {
         let handle = {
-            let handle = match it.next() {
-                Some(next_elem) => {
-                    let mut rit = ManuallyDrop::new(rit);
-                    ResourcesIterator::update_find_data(&mut find_data, next_elem);
+            let handle = match rit.next() {
+                Some(_) => {
+                    rit.update_find_data(&mut find_data);
                     &mut rit as *mut _ as HANDLE
                 }
                 None => INVALID_HANDLE,
@@ -46,10 +44,9 @@ fn main() {
         if handle != INVALID_HANDLE {
             let riit: &mut ResourcesIterator = unsafe { &mut *(handle as *mut ResourcesIterator) };
             //as *mut ResourcesIterator;
-            let it = riit.iterator();
-            match it.next() {
-                Some(next_elem) => {
-                    ResourcesIterator::update_find_data(&mut find_data, next_elem);
+            match riit.next() {
+                Some(_) => {
+                    riit.update_find_data(&mut find_data);
                 }
                 None => println!("None elem"),
             }

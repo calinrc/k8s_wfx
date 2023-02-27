@@ -1,4 +1,3 @@
-use anyhow::Ok;
 use consts::FsDefaultParamStruct;
 use consts::RemoteInfoStruct;
 use consts::TLogProc;
@@ -13,14 +12,13 @@ use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
 use iterator::ResourcesIterator;
+use iterator::FindDataUpdater;
 use std::cell::RefCell;
 use std::ffi::c_char;
 use std::ffi::c_int;
 use std::ffi::CStr;
 use std::ffi::CString;
-use std::mem::ManuallyDrop;
 use std::path::Path;
-use tracing::*;
 
 mod consts;
 mod iterator;
@@ -88,16 +86,15 @@ pub unsafe extern "C" fn FsFindFirst(
     let path = Path::new(path_str.as_ref());
     let parent = path.parent();
     eprintln!("Parent is none {}", parent.is_none());
-    let mut rit = Box::new(ResourcesIterator::new());
-    let it = (*rit).iterator();
+    let mut rit = Box::new(ResourcesIterator::new(path));
+    
 
-    let handle = match it.next() {
-        Some(next_elem) => {
+    let handle = match (*rit).next() {
+        Some(_) => {
             // Thin pointer
+            rit.update_find_data(find_data);
             let thin_ptr = Box::new(rit);
-            let mut mbrit = Box::into_raw(thin_ptr);
-            //let mut mbrit = ManuallyDrop::new(rit);
-            ResourcesIterator::update_find_data(find_data, next_elem);
+            let mbrit = Box::into_raw(thin_ptr);
              mbrit as *mut _ as HANDLE
         }
         None => INVALID_HANDLE,
@@ -111,14 +108,13 @@ pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATA
     eprintln!("FsFindNext enter");
     let ret_val: c_int = {
         if hdl != INVALID_HANDLE {
-            let mut riit = hdl as *mut Box<ResourcesIterator>;
+            let riit = hdl as *mut Box<ResourcesIterator>;
              //= hdl as *mut Box<ResourcesIterator>;
             //let mut riit: ManuallyDrop<Box<ResourcesIterator>> = unsafe { (hdl as ManuallyDrop<Box<ResourcesIterator>>) };
             //as *mut ResourcesIterator;
-            let it = (*riit).iterator();
-            match it.next() {
-                Some(next_elem) => {
-                    ResourcesIterator::update_find_data(find_data, next_elem);
+            match (*riit).next() {
+                Some(_) => {
+                    (*riit).update_find_data(find_data);
                     1
                 }
                 None => {
