@@ -5,14 +5,29 @@ use crate::consts::FILETIME;
 use crate::consts;
 use std::path::Path;
 
+pub mod pods;
 
 #[derive(Debug)]
-pub struct ReasourceData {
-
-}
+#[derive(Default)]
+pub struct ReasourceData;
 
 pub trait FindDataUpdater{
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA);
+}
+
+
+trait FindDataUpdaterIterator: Iterator + FindDataUpdater {}
+
+pub struct ResourcesItertatorFactory;
+
+impl ResourcesItertatorFactory {
+    pub fn new(path: &Path) -> ResourcesIterator {
+        ResourcesIterator{
+            it : Box::new(resources::K8SResources::iterator()),
+            next_elem: None
+
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -33,7 +48,7 @@ impl Iterator for ResourcesIterator<'_>{
             None
         }
         else{
-            Some(ReasourceData{})
+            Some(ReasourceData::default())
         }
     }   
 }
@@ -45,23 +60,6 @@ impl Drop for ResourcesIterator<'_> {
     }
 }
 
-
-
-impl ResourcesIterator<'_>{
-
-     pub fn new(path: &Path) -> Self {
-        Self{
-            it : Box::new(resources::K8SResources::iterator()),
-            next_elem: None
-
-        }
-    }
-
-    // pub fn iterator(&mut self) -> &mut std::slice::Iter<'static, resources::K8SResources>{
-    //     &mut *(self.it)
-    // }
-
-}
 
 impl FindDataUpdater for ResourcesIterator<'_>{
 

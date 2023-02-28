@@ -11,8 +11,9 @@ use consts::HANDLE;
 use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use iterator::ResourcesIterator;
-use iterator::FindDataUpdater;
+use iterators::ResourcesIterator;
+use iterators::ResourcesItertatorFactory;
+use iterators::FindDataUpdater;
 use std::cell::RefCell;
 use std::ffi::c_char;
 use std::ffi::c_int;
@@ -21,8 +22,7 @@ use std::ffi::CString;
 use std::path::Path;
 
 mod consts;
-mod iterator;
-mod pods;
+mod iterators;
 mod resources;
 
 // File: lib.rs
@@ -86,7 +86,7 @@ pub unsafe extern "C" fn FsFindFirst(
     let path = Path::new(path_str.as_ref());
     let parent = path.parent();
     eprintln!("Parent is none {}", parent.is_none());
-    let mut rit = Box::new(ResourcesIterator::new(path));
+    let mut rit = Box::new(ResourcesItertatorFactory::new(path));
     
 
     let handle = match (*rit).next() {
