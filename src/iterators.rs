@@ -11,34 +11,33 @@ pub mod pods;
 #[derive(Debug, Default)]
 pub struct ReasourceData;
 
-pub trait FindDataUpdater {
+pub trait FindDataUpdater: Iterator<Item =  ReasourceData> {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA);
 }
-
-pub trait FindDataUpdaterIterator: Iterator + FindDataUpdater {}
 
 pub struct ResourcesItertatorFactory;
 
 impl ResourcesItertatorFactory {
-    pub fn new(_path: &Path) -> impl Iterator {
-        if _path.parent().is_none() {
-            ResourcesIterator {
+    pub fn new(_path: &Path) -> Box<dyn FindDataUpdater>{
+        if !_path.parent().is_none() {
+            Box::new(PodsIterator {})
+        } else {
+            Box::new(BaseResourcesIterator {
                 it: Box::new(resources::K8SResources::iterator()),
                 next_elem: None,
-            }
-        } else {
-            PodsIterator {}
+            })
+           
         }
     }
 }
 
 #[derive(Debug)]
-pub struct ResourcesIterator<'a> {
+pub struct BaseResourcesIterator<'a> {
     it: Box<Iter<'static, resources::K8SResources>>,
     next_elem: Option<&'a resources::K8SResources>,
 }
 
-impl Iterator for ResourcesIterator<'_> {
+impl Iterator for BaseResourcesIterator<'_> {
     type Item = ReasourceData;
     fn next(&mut self) -> Option<ReasourceData> {
         let result = self.it.next();
@@ -52,13 +51,13 @@ impl Iterator for ResourcesIterator<'_> {
     }
 }
 
-impl Drop for ResourcesIterator<'_> {
+impl Drop for BaseResourcesIterator<'_> {
     fn drop(&mut self) {
-        println!("Drop ResourcesIterator")
+        println!("Drop BaseResourcesIterator")
     }
 }
 
-impl FindDataUpdater for ResourcesIterator<'_> {
+impl FindDataUpdater for BaseResourcesIterator<'_> {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
         match self.next_elem {
             Some(res) => {

@@ -3,7 +3,7 @@ use std::fmt;
 use core::future::Future;
 
 use crate::iterators::pods;
-
+use kube::ResourceExt;
 
 #[derive(Debug)]
 pub enum K8SResources {
@@ -104,7 +104,7 @@ impl K8SResources {
                 
                 let runtime_res  = self.async_to_sync_res(ftr);
                 match runtime_res {
-                    Ok(vec) => vec,
+                    Ok(vec) => vec.iter().map(|x| x.name_any()).collect::<Vec<String>>(),
                     Err(_err) => vec_empt,
                 }
             
@@ -114,7 +114,8 @@ impl K8SResources {
     }
     
     
-    fn async_to_sync_res(&self, future: impl Future<Output = anyhow::Result<Vec<String>>>) -> anyhow::Result<Vec<String>>{
+    
+    fn async_to_sync_res<T>(&self, future: impl Future<Output = anyhow::Result<Vec<T>>>) -> anyhow::Result<Vec<T>>{
         let runtime_res = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build();

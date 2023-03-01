@@ -2,7 +2,6 @@ use consts::FILETIME;
 use consts::HANDLE;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use iterators::ResourcesIterator;
 use iterators::ResourcesItertatorFactory;
 use iterators::FindDataUpdater;
 use std::path::Path;
@@ -35,18 +34,21 @@ fn main() {
             let handle = match rit.next() {
                 Some(_) => {
                     rit.update_find_data(&mut find_data);
-                    &mut rit as *mut _ as HANDLE
+                    let thin_ptr = Box::new(rit);
+                    let mbrit = Box::into_raw(thin_ptr);
+                     mbrit as *mut _ as HANDLE
+                    
                 }
                 None => INVALID_HANDLE,
             };
             handle
         };
         if handle != INVALID_HANDLE {
-            let riit: &mut ResourcesIterator = unsafe { &mut *(handle as *mut ResourcesIterator) };
+            let riit = handle as *mut Box<dyn FindDataUpdater>;
             //as *mut ResourcesIterator;
-            match riit.next() {
+            match (*riit).next() {
                 Some(_) => {
-                    riit.update_find_data(&mut find_data);
+                    (*riit).update_find_data(&mut find_data);
                 }
                 None => println!("None elem"),
             }
