@@ -2,11 +2,14 @@ use crate::consts;
 use crate::consts::FILETIME;
 use crate::consts::WIN32_FIND_DATAA;
 use crate::iterators::pods::PodsIterator;
+use crate::iterators::dummy::DummyIterator;
 use crate::resources;
 use std::path::Path;
 use std::slice::Iter;
+use core::future::Future;
 
 pub mod pods;
+pub mod dummy;
 
 #[derive(Debug, Default)]
 pub struct ReasourceData;
@@ -15,19 +18,35 @@ pub trait FindDataUpdater: Iterator<Item =  ReasourceData> {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA);
 }
 
+
 pub struct ResourcesItertatorFactory;
 
 impl ResourcesItertatorFactory {
     pub fn new(_path: &Path) -> Box<dyn FindDataUpdater>{
-        if !_path.parent().is_none() {
-            Box::new(PodsIterator {})
-        } else {
+        if _path.parent().is_none() {
             Box::new(BaseResourcesIterator {
                 it: Box::new(resources::K8SResources::iterator()),
                 next_elem: None,
             })
-           
-        }
+        }else{
+            let mut components = _path.components();
+            let _rd = components.next(); //root dir
+            let fp = components.next(); // first part
+            let iterator_info = fp.map(|c| c.as_os_str().to_str())
+                .flatten()
+                .map(|res_name| resources::K8SResources::from_str(res_name))
+                .flatten()
+                .and_then(|res|match res {
+                    resources::K8SResources::Pod => Some(PodsIterator::new()),
+                    _ => None
+
+                });
+                if let Some(it) = iterator_info {
+                    it
+                }else{
+                    Box::new(DummyIterator{})
+                }
+        } 
     }
 }
 
@@ -43,11 +62,7 @@ impl Iterator for BaseResourcesIterator<'_> {
         let result = self.it.next();
         self.next_elem = result;
 
-        if self.next_elem.is_none() {
-            None
-        } else {
-            Some(ReasourceData::default())
-        }
+        self.next_elem.map(|_| ReasourceData::default())
     }
 }
 
@@ -70,7 +85,7 @@ impl FindDataUpdater for BaseResourcesIterator<'_> {
                 (*find_data).n_file_size_low = 0;
                 (*find_data).dw_reserved_0 = 0;
                 (*find_data).dw_reserved_1 = 0;
-                let res_str = res.to_string();
+                let res_str = res.as_res_str();
                 let bytes = res_str.as_bytes();
                 let len = bytes.len();
 
@@ -94,4 +109,25 @@ impl FindDataUpdater for BaseResourcesIterator<'_> {
             }
         }
     }
+}
+
+
+trait K8sResourceIterator<T> {
+
+    fn get_resources( namespace:String) -> Vec<T>;
+
+    fn async_to_sync_res( future: impl Future<Output = anyhow::Result<Vec<T>>>) -> anyhow::Result<Vec<T>>{
+        let runtime_res = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build();
+        runtime_res?.block_on(future)
+        // let _ = match runtime_res {
+        //     Ok(runtime) => { _= runtime.block_on(future);
+        //                         println!("Done listing pods")},
+        //     Err(err) => panic!("Problem opening the file: {:?}", err),
+        // };
+    
+        // Ok(Vec::new())
+    }
+
 }

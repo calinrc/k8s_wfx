@@ -11,7 +11,6 @@ use consts::HANDLE;
 use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use iterators::BaseResourcesIterator;
 use iterators::ResourcesItertatorFactory;
 use iterators::FindDataUpdater;
 use std::cell::RefCell;
@@ -24,6 +23,7 @@ use std::path::Path;
 mod consts;
 mod iterators;
 mod resources;
+
 
 // File: lib.rs
 
