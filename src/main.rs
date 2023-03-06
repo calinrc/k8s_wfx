@@ -2,13 +2,14 @@ use consts::FILETIME;
 use consts::HANDLE;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use iterators::ResourcesItertatorFactory;
 use iterators::FindDataUpdater;
+use iterators::ResourcesItertatorFactory;
 use std::path::Path;
 
 mod consts;
 mod iterators;
 mod resources;
+mod helper;
 
 fn main() {
     println!("Start");
@@ -28,7 +29,7 @@ fn main() {
         c_alternate_file_name: [0i8; 14],
     };
 
-    let mut rit = ResourcesItertatorFactory::new( Path::new(""));
+    let mut rit = ResourcesItertatorFactory::new(Path::new(""));
     unsafe {
         let handle = {
             let handle = match rit.next() {
@@ -36,8 +37,7 @@ fn main() {
                     rit.update_find_data(&mut find_data);
                     let thin_ptr = Box::new(rit);
                     let mbrit = Box::into_raw(thin_ptr);
-                     mbrit as *mut _ as HANDLE
-                    
+                    mbrit as *mut _ as HANDLE
                 }
                 None => INVALID_HANDLE,
             };

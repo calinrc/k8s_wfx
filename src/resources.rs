@@ -1,9 +1,8 @@
-use std::slice::Iter;
 use std::fmt;
+use std::slice::Iter;
 
-
-use kube::ResourceExt;
 use ::phf::phf_map;
+use kube::ResourceExt;
 
 #[derive(Debug)]
 pub enum K8SResources {
@@ -59,7 +58,7 @@ const RESOURCES_ARR: [K8SResources; 24] = [
     K8SResources::Role,
 ];
 
-const RESOURCES_HM:phf::Map<&'static str, K8SResources> = phf_map!{
+const RESOURCES_HM: phf::Map<&'static str, K8SResources> = phf_map! {
     "configmap" => K8SResources::ConfigMap,
     "endpoint" => K8SResources::Endpoint,
     "event" => K8SResources::Event,
@@ -117,44 +116,41 @@ impl fmt::Display for K8SResources {
     }
 }
 
-
 impl K8SResources {
     pub fn iterator() -> Iter<'static, K8SResources> {
         RESOURCES_ARR.iter()
     }
 
-    pub fn as_res_str(&self)-> String{
+    pub fn as_res_str(&self) -> String {
         match self {
-            K8SResources::ConfigMap => String::from( "configmap"),
-            K8SResources::Endpoint => String::from( "endpoint"),
-            K8SResources::Event => String::from( "event"),
-            K8SResources::Namespace => String::from( "namespace"),
-            K8SResources::Node => String::from( "node"),
-            K8SResources::PersistentVolumeClaim => String::from( "pvc"),
-            K8SResources::PersistentVolume => String::from( "pv"),
-            K8SResources::Pod => String::from( "pod"),
-            K8SResources::ReplicationController => String::from( "replicationcontroller"),
-            K8SResources::Secret => String::from( "secret"),
-            K8SResources::ServiceAccount => String::from( "serviceaccount"),
-            K8SResources::Service => String::from( "service"),
-            K8SResources::CustomResourceDefinition => String::from( "crd"),
-            K8SResources::ApiService => String::from( "apiservice"),
-            K8SResources::Deployment => String::from( "deployment"),
-            K8SResources::ReplicaSet => String::from( "replicaset"),
-            K8SResources::StatefulSet => String::from( "Statefulset"),
-            K8SResources::CronJob => String::from( "cronjob"),
-            K8SResources::Job => String::from( "job"),
-            K8SResources::Ingresse => String::from( "ingresse"),
-            K8SResources::ClusterRoleBinding => String::from( "clusterrolebinding"),
-            K8SResources::ClusterRole => String::from( "clusterrole"),
-            K8SResources::RoleBinding => String::from( "rolebinding"),
-            K8SResources::Role => String::from( "role"),
+            K8SResources::ConfigMap => String::from("configmap"),
+            K8SResources::Endpoint => String::from("endpoint"),
+            K8SResources::Event => String::from("event"),
+            K8SResources::Namespace => String::from("namespace"),
+            K8SResources::Node => String::from("node"),
+            K8SResources::PersistentVolumeClaim => String::from("pvc"),
+            K8SResources::PersistentVolume => String::from("pv"),
+            K8SResources::Pod => String::from("pod"),
+            K8SResources::ReplicationController => String::from("replicationcontroller"),
+            K8SResources::Secret => String::from("secret"),
+            K8SResources::ServiceAccount => String::from("serviceaccount"),
+            K8SResources::Service => String::from("service"),
+            K8SResources::CustomResourceDefinition => String::from("crd"),
+            K8SResources::ApiService => String::from("apiservice"),
+            K8SResources::Deployment => String::from("deployment"),
+            K8SResources::ReplicaSet => String::from("replicaset"),
+            K8SResources::StatefulSet => String::from("Statefulset"),
+            K8SResources::CronJob => String::from("cronjob"),
+            K8SResources::Job => String::from("job"),
+            K8SResources::Ingresse => String::from("ingresse"),
+            K8SResources::ClusterRoleBinding => String::from("clusterrolebinding"),
+            K8SResources::ClusterRole => String::from("clusterrole"),
+            K8SResources::RoleBinding => String::from("rolebinding"),
+            K8SResources::Role => String::from("role"),
         }
     }
 
-    pub fn from_str(name:&str )-> Option<&'static K8SResources> {
+    pub fn from_str(name: &str) -> Option<&'static K8SResources> {
         RESOURCES_HM.get(name)
     }
-
-
 }

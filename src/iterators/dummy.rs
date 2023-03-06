@@ -3,7 +3,7 @@ use crate::iterators::ReasourceData;
 
 use super::FindDataUpdater;
 
-pub struct DummyIterator{}
+pub struct DummyIterator {}
 
 impl Drop for DummyIterator {
     fn drop(&mut self) {

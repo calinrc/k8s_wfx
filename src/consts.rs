@@ -85,8 +85,8 @@ pub const FS_EXEC_OK: c_int = 0;
 
 // flags for FsFindFirst/FsFindNext
 pub const FILE_ATTRIBUTE_DIRECTORY: c_uint = 0x00000010;
-// 
-pub const FILE_ATTRIBUTE_REPARSE_POINT: c_uint = 0x00000400;
+//
+// pub const FILE_ATTRIBUTE_REPARSE_POINT: c_uint = 0x00000400;
 pub const FILE_ATTRIBUTE_UNIX_MODE: c_uint = 0x80000000;
 
 pub type TProgressProc = unsafe extern "C" fn(c_int, *mut c_char, *mut c_char, c_int) -> c_int;
@@ -100,24 +100,27 @@ pub const INVALID_HANDLE: HANDLE = -1isize as HANDLE; // {0xffffffffffffffff as 
 
 pub type DWORD = c_uint;
 
-#[derive(Default)]
+#[derive(Default, Debug, Copy, Clone)]
 #[repr(C)]
 pub struct FILETIME {
     pub dw_low_date_time: DWORD,
     pub dw_high_date_time: DWORD,
 }
 
-impl FILETIME{
-    pub fn new()->Self {
-        Self { dw_low_date_time: 0, 
-            dw_high_date_time: 0 }
+impl FILETIME {
+    pub fn new(low: DWORD, high: DWORD) -> Self {
+        Self {
+            dw_low_date_time: low,
+            dw_high_date_time: high,
+        }
     }
 
-    pub fn default()->Self {
-        Self { dw_low_date_time: 0, 
-            dw_high_date_time: 0 }
+    pub fn default() -> Self {
+        Self {
+            dw_low_date_time: 0,
+            dw_high_date_time: 0,
+        }
     }
-
 }
 
 pub const MAX_PATH: usize = 260;
@@ -125,6 +128,7 @@ pub type BOOL = c_uint;
 
 // #[repr(C)]
 
+#[derive(Debug, Copy, Clone)]
 #[repr(C, packed)]
 pub struct WIN32_FIND_DATAA {
     pub dw_file_attributes: DWORD,
@@ -139,6 +143,7 @@ pub struct WIN32_FIND_DATAA {
     pub c_alternate_file_name: [c_char; 14],
 }
 
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct RemoteInfoStruct {
     pub size_low: DWORD,
@@ -147,6 +152,7 @@ pub struct RemoteInfoStruct {
     pub attr: c_int,
 }
 
+#[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct FsDefaultParamStruct {
     pub size: c_int,

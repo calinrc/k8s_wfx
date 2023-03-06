@@ -1,12 +1,15 @@
 use crate::consts::WIN32_FIND_DATAA;
-use crate::iterators::{ReasourceData, K8sResourceIterator};
+use crate::iterators::{K8sResourceIterator, ReasourceData};
 use k8s_openapi::api::core::v1::Pod;
 use kube::{client::ConfigExt, Api, Client, Config, ResourceExt};
-use std::slice::Iter;
+use crate::consts;
+use crate::consts::FILETIME;
+use crate::helper;
+
 
 use super::FindDataUpdater;
 
-pub struct PodsIterator{
+pub struct PodsIterator {
     it: Box<std::vec::IntoIter<Pod>>,
     next_elem: Option<Pod>,
 }
@@ -20,39 +23,88 @@ impl Drop for PodsIterator {
 impl Iterator for PodsIterator {
     type Item = ReasourceData;
     fn next(&mut self) -> Option<ReasourceData> {
-        None
+        let result = self.it.next();
+        self.next_elem = result;
+        if !self.next_elem.is_none(){
+            Some(ReasourceData::default())
+        }else{
+            
+            None
+        }
+        
+        //self.next_elem.map(|_| ReasourceData::default())
     }
 }
 
 impl FindDataUpdater for PodsIterator {
-    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {}
-}
+    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
+        match &self.next_elem {
+            Some(next_elem) => {
+                let ct = next_elem
+                    .creation_timestamp()
+                    .map(|ts| helper::to_split_file_time(ts.0.timestamp_micros()))
+                    .map(|(l,h)| FILETIME::new(l as u32, h as u32));
+                let ct_unwrap = ct.unwrap_or( FILETIME::default());
 
-impl K8sResourceIterator<Pod> for PodsIterator {
-    fn get_resources(namespace:String) -> Vec<Pod> {
-        let vec_empt:Vec<Pod> = Vec::new();
-        
-        let runtime_res  = Self::async_to_sync_res(list_pods(namespace));
-        match runtime_res {
-            Ok(vec) => vec,
-            Err(_err) => vec_empt,
+                (*find_data).dw_file_attributes =
+                    consts::FILE_ATTRIBUTE_UNIX_MODE ;
+                (*find_data).ft_creation_time = ct_unwrap;
+                (*find_data).ft_last_access_time = ct_unwrap;
+                (*find_data).ft_last_write_time = ct_unwrap;
+                (*find_data).n_file_size_high = 0;
+                (*find_data).n_file_size_low = 0;
+                (*find_data).dw_reserved_0 = 0;
+                (*find_data).dw_reserved_1 = 0;
+                let res_str = next_elem.name_any();
+                let bytes = res_str.as_bytes();
+                let len = bytes.len();
+
+
+
+                std::ptr::copy(
+                    bytes.as_ptr().cast(),
+                    (*find_data).c_file_name.as_mut_ptr(),
+                    consts::MAX_PATH,
+                );
+                std::ptr::write(
+                    (*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8,
+                    0u8,
+                );
+
+                //(*find_data).c_file_name= [0i8;260];
+                (*find_data).c_alternate_file_name = [0i8; 14];
+
+                println!("Pod resource {}", res_str)
+            }
+            None => println!("update_find_data on None Pods")
         }
     }
 }
 
-impl PodsIterator{
-    pub fn new() -> Box<Self>{
-        let v = Self::get_resources(String::from("default"));
-        Box::new(Self {
-            it:Box::new(v.into_iter()),
-            next_elem: None,
-        })
-        
+impl K8sResourceIterator<Pod> for PodsIterator {
+    fn get_resources(namespace: String) -> Vec<Pod> {
+        let vec_empt: Vec<Pod> = Vec::new();
+
+        let runtime_res = Self::async_to_sync_res(list_pods(namespace));
+        match runtime_res {
+            Ok(vec) => vec,
+            Err(_err) => {
+                eprintln!("Fail on getting pods list {}", _err.to_string());
+                vec_empt
+            }
+        }
     }
 }
 
-
-
+impl PodsIterator {
+    pub fn new() -> Box<Self> {
+        let v = Self::get_resources(String::from("default"));
+        Box::new(Self {
+            it: Box::new(v.into_iter()),
+            next_elem: None,
+        })
+    }
+}
 
 pub async fn list_pods(namespace: String) -> anyhow::Result<Vec<Pod>> {
     let config = Config::infer().await?;
