@@ -40,11 +40,11 @@ impl FindDataUpdater for PodsIterator {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
         match &self.next_elem {
             Some(next_elem) => {
-                let ct = next_elem
-                    .creation_timestamp()
-                    .map(|ts| helper::to_split_file_time(ts.0.timestamp_micros()))
+                let creation_time_opt = next_elem.creation_timestamp();
+                let ct = creation_time_opt
+                    .map(|ts| helper::to_split_file_time(ts.0.timestamp_millis()))
                     .map(|(l,h)| FILETIME::new(l as u32, h as u32));
-                let ct_unwrap = ct.unwrap_or( FILETIME::default());
+                let ct_unwrap = FILETIME::default(); //ct.unwrap_or( FILETIME::default());
 
                 (*find_data).dw_file_attributes =
                     consts::FILE_ATTRIBUTE_UNIX_MODE ;

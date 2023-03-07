@@ -25,6 +25,7 @@ mod iterators;
 mod resources;
 mod helper;
 
+
 // File: lib.rs
 
 // For further reading ...
@@ -144,14 +145,14 @@ pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn FsMkDir(path: *mut c_char) -> BOOL {
+pub unsafe extern "C" fn FsMkDir(_path: *mut c_char) -> BOOL {
     eprintln!("FsMkDir enter");
     eprintln!("FsMkDir exit");
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn FsRemoveDir(remote_name: *mut c_char) -> BOOL {
+pub unsafe extern "C" fn FsRemoveDir(_remote_name: *mut c_char) -> BOOL {
     eprintln!("FsRemoveDir enter");
     eprintln!("FsRemoveDir exit");
     0
@@ -159,11 +160,11 @@ pub unsafe extern "C" fn FsRemoveDir(remote_name: *mut c_char) -> BOOL {
 
 #[no_mangle]
 pub unsafe extern "C" fn FsRenMovFile(
-    old_name: *mut c_char,
-    new_name: *mut c_char,
-    mmove: BOOL,
-    over_write: BOOL,
-    ri: *mut RemoteInfoStruct,
+    _old_name: *mut c_char,
+    _new_name: *mut c_char,
+    _mmove: BOOL,
+    _over_write: BOOL,
+    _ri: *mut RemoteInfoStruct,
 ) -> c_int {
     eprintln!("FsRenMovFile enter");
     eprintln!("FsRenMovFile exit");
@@ -172,10 +173,10 @@ pub unsafe extern "C" fn FsRenMovFile(
 
 #[no_mangle]
 pub unsafe extern "C" fn FsGetFile(
-    remote_name: *mut c_char,
-    local_name: *mut c_char,
-    copy_flags: c_int,
-    ri: *mut RemoteInfoStruct,
+    _remote_name: *mut c_char,
+    _local_name: *mut c_char,
+    _copy_flags: c_int,
+    _ri: *mut RemoteInfoStruct,
 ) -> c_int {
     eprintln!("FsGetFile enter");
     eprintln!("FsGetFile exit");
@@ -184,9 +185,9 @@ pub unsafe extern "C" fn FsGetFile(
 
 #[no_mangle]
 pub unsafe extern "C" fn FsPutFile(
-    local_name: *mut c_char,
-    remote_name: *mut c_char,
-    copy_flags: c_int,
+    _local_name: *mut c_char,
+    _remote_name: *mut c_char,
+    _copy_flags: c_int,
 ) -> c_int {
     eprintln!("FsPutFile enter");
     eprintln!("FsPutFile exit");
@@ -195,9 +196,9 @@ pub unsafe extern "C" fn FsPutFile(
 
 #[no_mangle]
 pub unsafe extern "C" fn FsExecuteFile(
-    main_win: HWND,
-    remote_name: *mut c_char,
-    verb: *mut c_char,
+    _main_win: HWND,
+    _remote_name: *mut c_char,
+    _verb: *mut c_char,
 ) -> c_int {
     eprintln!("FsExecuteFile enter");
     eprintln!("FsExecuteFile exit");
@@ -205,7 +206,7 @@ pub unsafe extern "C" fn FsExecuteFile(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn FsDeleteFile(remote_name: *mut c_char) -> BOOL {
+pub unsafe extern "C" fn FsDeleteFile(_remote_name: *mut c_char) -> BOOL {
     eprintln!("FsDeleteFile enter");
     eprintln!("FsDeleteFile exit");
     0
@@ -213,10 +214,10 @@ pub unsafe extern "C" fn FsDeleteFile(remote_name: *mut c_char) -> BOOL {
 
 #[no_mangle]
 pub unsafe extern "C" fn FsSetTime(
-    remote_name: *mut c_char,
-    creation_time: *mut FILETIME,
-    last_access_time: *mut FILETIME,
-    last_write_time: *mut FILETIME,
+    _remote_name: *mut c_char,
+    _creation_time: *mut FILETIME,
+    _last_access_time: *mut FILETIME,
+    _last_write_time: *mut FILETIME,
 ) -> BOOL {
     eprintln!("FsSetTime enter");
     eprintln!("FsSetTime exit");
@@ -224,7 +225,7 @@ pub unsafe extern "C" fn FsSetTime(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn FsDisconnect(disconnect_root: *mut c_char) -> BOOL {
+pub unsafe extern "C" fn FsDisconnect(_disconnect_root: *mut c_char) -> BOOL {
     eprintln!("FsDisconnect enter");
     eprintln!("FsDisconnect exit");
     0

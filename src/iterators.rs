@@ -40,6 +40,7 @@ impl ResourcesItertatorFactory {
                     resources::K8SResources::Pod => Some(PodsIterator::new()),
                     _ => None,
                 });
+                
             if let Some(it) = iterator_info {
                 it
             } else {

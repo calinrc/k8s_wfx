@@ -1,8 +1,6 @@
 use std::fmt;
 use std::slice::Iter;
 
-use ::phf::phf_map;
-use kube::ResourceExt;
 
 #[derive(Debug)]
 pub enum K8SResources {
@@ -58,32 +56,6 @@ const RESOURCES_ARR: [K8SResources; 24] = [
     K8SResources::Role,
 ];
 
-const RESOURCES_HM: phf::Map<&'static str, K8SResources> = phf_map! {
-    "configmap" => K8SResources::ConfigMap,
-    "endpoint" => K8SResources::Endpoint,
-    "event" => K8SResources::Event,
-    "namespace" => K8SResources::Namespace,
-    "node" => K8SResources::Node,
-    "pvc" => K8SResources::PersistentVolumeClaim,
-    "pv" => K8SResources::PersistentVolume,
-    "pod" => K8SResources::Pod,
-    "replicationcontroller" => K8SResources::ReplicationController,
-    "secret" => K8SResources::Secret,
-    "serviceaccount" => K8SResources::ServiceAccount,
-    "service" => K8SResources::Service,
-    "crd" => K8SResources::CustomResourceDefinition,
-    "apiservice" => K8SResources::ApiService,
-    "deployment" => K8SResources::Deployment,
-    "replicaset" => K8SResources::ReplicaSet,
-    "statefulset" => K8SResources::StatefulSet,
-    "cronjob" => K8SResources::CronJob,
-    "job" => K8SResources::Job,
-    "ingresse" => K8SResources::Ingresse,
-    "clusterrolebinding" => K8SResources::ClusterRoleBinding,
-    "clusterrole" => K8SResources::ClusterRole,
-    "rolebinding" => K8SResources::RoleBinding,
-    "role" => K8SResources::Role,
-};
 
 impl fmt::Display for K8SResources {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -150,7 +122,33 @@ impl K8SResources {
         }
     }
 
-    pub fn from_str(name: &str) -> Option<&'static K8SResources> {
-        RESOURCES_HM.get(name)
+    pub fn from_str(name: &str) -> Option<K8SResources> {
+        match name {
+            "configmap" => Some(K8SResources::ConfigMap),
+            "endpoint" => Some(K8SResources::Endpoint),
+            "event" => Some(K8SResources::Event),
+            "namespace" => Some(K8SResources::Namespace),
+            "node" => Some(K8SResources::Node),
+            "pvc" => Some(K8SResources::PersistentVolumeClaim),
+            "pv" => Some(K8SResources::PersistentVolume),
+            "pod" => Some(K8SResources::Pod),
+            "replicationcontroller" => Some(K8SResources::ReplicationController),
+            "secret" => Some(K8SResources::Secret),
+            "serviceaccount" => Some(K8SResources::ServiceAccount),
+            "service" => Some(K8SResources::Service),
+            "crd" => Some(K8SResources::CustomResourceDefinition),
+            "apiservice" => Some(K8SResources::ApiService),
+            "deployment" => Some(K8SResources::Deployment),
+            "replicaset" => Some(K8SResources::ReplicaSet),
+            "statefulset" => Some(K8SResources::StatefulSet),
+            "cronjob" => Some(K8SResources::CronJob),
+            "job" => Some(K8SResources::Job),
+            "ingresse" => Some(K8SResources::Ingresse),
+            "clusterrolebinding" => Some(K8SResources::ClusterRoleBinding),
+            "clusterrole" => Some(K8SResources::ClusterRole),
+            "rolebinding" => Some(K8SResources::RoleBinding),
+            "role" => Some(K8SResources::Role),
+            _ => None
+        }
     }
 }

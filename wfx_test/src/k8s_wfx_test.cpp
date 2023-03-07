@@ -54,7 +54,7 @@ int main()
     strcpy(lib_path, LIB_REL_PATH);
     delete[] userHomeDir;
 
-    LIB_HANDLER handle = LOAD_LIB(lib_path, RTLD_LAZY);
+     LIB_HANDLER handle = LOAD_LIB(lib_path, RTLD_LAZY);
 
     FsGetDefRootName_func FsGetDefRootName = (FsGetDefRootName_func)LOAD_PROC(handle, "FsGetDefRootName");
     FsInit_func FsInit = (FsInit_func)LOAD_PROC(handle, "FsInit");
@@ -96,6 +96,22 @@ int main()
 
     int closeResult = FsFindClose(h);
     printf("FsFindClose result %d", closeResult);
+
+    strcpy(path, "/pod");
+
+    h = FsFindFirst(path, &FindData);
+    hasNext = true;
+    if (h != NULL && h != INVALID_HANDLE)
+    {
+        while (hasNext)
+        {
+            printFileInfo(path, &FindData);
+            hasNext = FsFindNext(h, &FindData);
+        }
+    }
+
+    closeResult = FsFindClose(h);
+    printf("FsFindClose result %d", closeResult);    
 
     return 0;
 }

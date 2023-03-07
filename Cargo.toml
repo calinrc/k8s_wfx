@@ -17,7 +17,6 @@ tokio = { version = "1.14.0", features = ["full"] }
 tower = { version = "0.4.6", features = ["limit"] }
 tower-http = { version = "0.3.2", features = ["trace", "decompression-gzip"] }
 hyper = { version = "0.14.13", features = ["client", "http1", "stream", "tcp"] }
-phf = { version = "0.11.1", features = ["macros"]}
 
 
 [features]
@@ -36,9 +35,6 @@ cbindgen = "0.24.3"
 [lib]
 name         = "k8s_wfx"
 crate-type   = ["cdylib"]
-
-
-
 
 [[bin]]
 name = "k8s_bin"

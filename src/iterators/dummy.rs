@@ -18,5 +18,5 @@ impl Iterator for DummyIterator {
     }
 }
 impl FindDataUpdater for DummyIterator {
-    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {}
+    unsafe fn update_find_data(&self, _find_data: *mut WIN32_FIND_DATAA) {}
 }
