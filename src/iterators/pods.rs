@@ -85,7 +85,7 @@ impl K8sResourceIterator<Pod> for PodsIterator {
     fn get_resources(namespace: String) -> Vec<Pod> {
         let vec_empt: Vec<Pod> = Vec::new();
 
-        let runtime_res = Self::async_to_sync_res(list_pods(namespace));
+        let runtime_res = Self::async_to_sync_res(list_pods(&namespace));
         match runtime_res {
             Ok(vec) => vec,
             Err(_err) => {
@@ -98,7 +98,7 @@ impl K8sResourceIterator<Pod> for PodsIterator {
 
 impl PodsIterator {
     pub fn new() -> Box<Self> {
-        let v = Self::get_resources(String::from("default"));
+        let v = Self::get_resources(String::from("kube-system"));
         Box::new(Self {
             it: Box::new(v.into_iter()),
             next_elem: None,
@@ -106,7 +106,7 @@ impl PodsIterator {
     }
 }
 
-pub async fn list_pods(namespace: String) -> anyhow::Result<Vec<Pod>> {
+pub async fn list_pods(namespace: &String) -> anyhow::Result<Vec<Pod>> {
     let config = Config::infer().await?;
     let https = config.openssl_https_connector()?;
     let mut vec = Vec::new();
@@ -117,7 +117,7 @@ pub async fn list_pods(namespace: String) -> anyhow::Result<Vec<Pod>> {
 
     let client = Client::new(service, namespace);
 
-    let pods: Api<Pod> = Api::default_namespaced(client);
+    let pods: Api<Pod> = Api::namespaced(client, &namespace);
     for p in pods.list(&Default::default()).await? {
         vec.push(p.clone());
         //info!("{}", p.name_any());

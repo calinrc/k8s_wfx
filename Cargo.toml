@@ -18,6 +18,11 @@ tower = { version = "0.4.6", features = ["limit"] }
 tower-http = { version = "0.3.2", features = ["trace", "decompression-gzip"] }
 hyper = { version = "0.14.13", features = ["client", "http1", "stream", "tcp"] }
 
+# [profile.dev]
+# opt-level = 1
+
+# [profile.release]
+# opt-level = 3
 
 [features]
 default = ["openssl-tls", "rustls-tls", "kubederive", "ws", "latest", "runtime"]
@@ -29,14 +34,14 @@ ws = ["kube/ws"]
 latest = ["k8s-openapi/v1_26"]
 
 
-[build-dependencies]
-cbindgen = "0.24.3"
+# [build-dependencies]
+# cbindgen = "0.24.3"
 
 [lib]
 name         = "k8s_wfx"
 crate-type   = ["cdylib"]
 
-[[bin]]
-name = "k8s_bin"
-path = "src/main.rs"
+# [[bin]]
+# name = "k8s_bin"
+# path = "src/main.rs"
 
