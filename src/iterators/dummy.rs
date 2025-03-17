@@ -5,6 +5,13 @@ use super::FindDataUpdater;
 
 pub struct DummyIterator {}
 
+impl DummyIterator{
+    pub fn new() -> Box<Self> {
+        Box::new(Self {})
+    }
+
+}
+
 impl Drop for DummyIterator {
     fn drop(&mut self) {
         println!("Drop DummyIterator")

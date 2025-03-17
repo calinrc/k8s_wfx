@@ -108,7 +108,7 @@ private:
         char *userHomeDir = getUserHomeDir();
         if (userHomeDir != NULL)
         {
-            sprintf(path, "%s/%s", userHomeDir, relativePath);
+            snprintf(path, MAX_PATH, "%s/%s", userHomeDir, relativePath);
             delete[] userHomeDir;
             size_t length = strlen(path);
 

@@ -12,7 +12,7 @@ use consts::HWND;
 use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
 use iterators::FindDataUpdater;
-use iterators::ResourcesItertatorFactory;
+use iterators::ResourcesIteratorFactory;
 use std::cell::RefCell;
 use std::ffi::c_char;
 use std::ffi::c_int;
@@ -29,7 +29,7 @@ mod helper;
 // File: lib.rs
 
 // For further reading ...
-// #[no_mangle] - // https://internals.rust-lang.org/t/precise-semantics-of-no-mangle/4098
+// #[unsafe(no_mangle)] - // https://internals.rust-lang.org/t/precise-semantics-of-no-mangle/4098
 //
 // typedef int (DCPCALL *tProgressProc)(int PluginNr,char* SourceName, char* TargetName,int PercentDone);
 // typedef void (DCPCALL *tLogProc)(int PluginNr,int MsgType,char* LogString);
@@ -41,7 +41,7 @@ thread_local!(static G_PROGRESS_PROC: RefCell<Option<TProgressProc> >  = RefCell
 thread_local!(static G_LOG_PROC: RefCell<Option<TLogProc> >  = RefCell::new(None));
 thread_local!(static G_REQUEST_PROC: RefCell<Option<TRequestProc> >  = RefCell::new(None));
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsInit(
     plugin_nr: c_int,
     p_progress_proc: TProgressProc,
@@ -76,7 +76,7 @@ pub unsafe extern "C" fn FsInit(
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsFindFirst(
     path: *mut c_char,
     find_data: *mut WIN32_FIND_DATAA,
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn FsFindFirst(
     let path = Path::new(path_str.as_ref());
     let parent = path.parent();
     eprintln!("Parent is none {}", parent.is_none());
-    let mut rit = ResourcesItertatorFactory::new(path);
+    let mut rit = ResourcesIteratorFactory::new(path);
 
     let handle = match (*rit).next() {
         Some(_) => {
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn FsFindFirst(
     handle
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATAA) -> c_int {
     eprintln!("FsFindNext enter");
     let ret_val: c_int = {
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATA
     ret_val
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
     eprintln!("FsFindClose enter");
     //let riit: &mut ResourcesIterator = unsafe { &mut *(hdl as *mut ResourcesIterator) };
@@ -144,21 +144,21 @@ pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
     FS_FILE_OK
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsMkDir(_path: *mut c_char) -> BOOL {
     eprintln!("FsMkDir enter");
     eprintln!("FsMkDir exit");
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsRemoveDir(_remote_name: *mut c_char) -> BOOL {
     eprintln!("FsRemoveDir enter");
     eprintln!("FsRemoveDir exit");
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsRenMovFile(
     _old_name: *mut c_char,
     _new_name: *mut c_char,
@@ -171,7 +171,7 @@ pub unsafe extern "C" fn FsRenMovFile(
     FS_FILE_OK
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsGetFile(
     _remote_name: *mut c_char,
     _local_name: *mut c_char,
@@ -183,7 +183,7 @@ pub unsafe extern "C" fn FsGetFile(
     FS_FILE_OK
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsPutFile(
     _local_name: *mut c_char,
     _remote_name: *mut c_char,
@@ -194,7 +194,7 @@ pub unsafe extern "C" fn FsPutFile(
     FS_FILE_OK
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsExecuteFile(
     _main_win: HWND,
     _remote_name: *mut c_char,
@@ -205,14 +205,14 @@ pub unsafe extern "C" fn FsExecuteFile(
     FS_EXEC_OK
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsDeleteFile(_remote_name: *mut c_char) -> BOOL {
     eprintln!("FsDeleteFile enter");
     eprintln!("FsDeleteFile exit");
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsSetTime(
     _remote_name: *mut c_char,
     _creation_time: *mut FILETIME,
@@ -224,14 +224,14 @@ pub unsafe extern "C" fn FsSetTime(
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsDisconnect(_disconnect_root: *mut c_char) -> BOOL {
     eprintln!("FsDisconnect enter");
     eprintln!("FsDisconnect exit");
     0
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsSetDefaultParams(dps: *mut FsDefaultParamStruct) {
     eprintln!("FsSetDefaultParams enter");
     let str = CStr::from_ptr((*dps).default_ini_name.as_ptr()).to_string_lossy();
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn FsSetDefaultParams(dps: *mut FsDefaultParamStruct) {
     eprintln!("FsSetDefaultParams exit");
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsGetDefRootName(def_root_name: *mut c_char, maxlen: c_int) {
     eprintln!("FsGetDefRootName enter");
     let plugin_name = "k8s";

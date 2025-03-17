@@ -1,27 +1,28 @@
-use crate::consts;
+use std::iter::Iterator;
+use k8s_openapi::api::core::v1::{Namespace};
+use crate::iterators::{K8sResourceIterator, ReasourceData};
+use super::FindDataUpdater;
 use crate::consts::FILETIME;
 use crate::consts::WIN32_FIND_DATAA;
-use crate::helper;
-use crate::iterators::{K8sResourceIterator, ReasourceData};
+use crate::{consts, helper};
 use hyper_util::rt::TokioExecutor;
-use k8s_openapi::api::core::v1::Pod;
 use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
 use tower::{BoxError, ServiceBuilder};
 
-use super::FindDataUpdater;
 
-pub struct PodsIterator {
-    it: Box<std::vec::IntoIter<Pod>>,
-    next_elem: Option<Pod>,
+// NamespaceIterator: Iterator for namespaces, similar to PodIterator
+pub struct NamespacesIterator {
+    it: Box<std::vec::IntoIter<Namespace>>,
+    next_elem: Option<Namespace>,
 }
 
-impl Drop for PodsIterator {
+impl Drop for NamespacesIterator {
     fn drop(&mut self) {
-        println!("Drop PodsIterator")
+        println!("Drop NamespacesIterator")
     }
 }
 
-impl Iterator for PodsIterator {
+impl Iterator for NamespacesIterator {
     type Item = ReasourceData;
     fn next(&mut self) -> Option<ReasourceData> {
         let result = self.it.next();
@@ -34,7 +35,7 @@ impl Iterator for PodsIterator {
     }
 }
 
-impl FindDataUpdater for PodsIterator {
+impl FindDataUpdater for NamespacesIterator {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
         match &self.next_elem {
             Some(next_elem) => {
@@ -69,32 +70,32 @@ impl FindDataUpdater for PodsIterator {
                 //(*find_data).c_file_name= [0i8;260];
                 unsafe { *find_data }.c_alternate_file_name = [0i8; 14];
 
-                println!("Pod resource {}", res_str)
+                println!("Namespace resource {}", res_str)
             }
-            None => println!("update_find_data on None Pods"),
+            None => println!("update_find_data on None Namespaces"),
         }
     }
 }
 
-impl K8sResourceIterator<Pod> for PodsIterator {
+impl K8sResourceIterator<Namespace> for NamespacesIterator {
 }
 
-impl PodsIterator {
+impl NamespacesIterator {
     pub fn new() -> Box<Self> {
-        let v = Self::get_resources(String::from("kube-system"));
+        let v = Self::get_resources();
         Box::new(Self {
             it: Box::new(v.into_iter()),
             next_elem: None,
         })
     }
-    fn get_resources(namespace: String) -> Vec<Pod> {
-        let vec_empt: Vec<Pod> = Vec::new();
+    fn get_resources() -> Vec<Namespace> {
+        let vec_empt: Vec<Namespace> = Vec::new();
 
-        let runtime_res = Self::async_to_sync_res(list_pods(&namespace));
+        let runtime_res = Self::async_to_sync_res(list_namespaces());
         match runtime_res {
             Ok(vec) => vec,
             Err(_err) => {
-                eprintln!("Fail on getting pods list {}", _err.to_string());
+                eprintln!("Fail on getting Namespace list {}", _err.to_string());
                 vec_empt
             }
         }
@@ -102,7 +103,7 @@ impl PodsIterator {
 
 }
 
-pub async fn list_pods(namespace: &String) -> anyhow::Result<Vec<Pod>> {
+pub async fn list_namespaces() -> anyhow::Result<Vec<Namespace>> {
     let config = Config::infer().await?;
     let https = config.openssl_https_connector()?;
     let mut vec = Vec::new();
@@ -113,10 +114,10 @@ pub async fn list_pods(namespace: &String) -> anyhow::Result<Vec<Pod>> {
         .service(hyper_util::client::legacy::Client::builder(TokioExecutor::new()).build(https));
     // .service(hyper::Client::builder().build(https));
 
-    let client = Client::new(service, namespace);
+    let client = Client::new(service, &config.default_namespace);
 
-    let pods: Api<Pod> = Api::namespaced(client, &namespace);
-    for p in pods.list(&Default::default()).await? {
+    let namespaces: Api<Namespace> = Api::all(client);
+    for p in namespaces.list(&Default::default()).await? {
         vec.push(p.clone());
         //info!("{}", p.name_any());
     }

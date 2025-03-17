@@ -1,16 +1,12 @@
 use consts::FILETIME;
-use consts::HANDLE;
-use consts::INVALID_HANDLE;
 use consts::WIN32_FIND_DATAA;
-use iterators::FindDataUpdater;
-use iterators::ResourcesItertatorFactory;
+use iterators::ResourcesIteratorFactory;
 use std::path::Path;
 
 mod consts;
+mod helper;
 mod iterators;
 mod resources;
-mod helper;
-
 
 fn main() {
     println!("Start");
@@ -30,30 +26,55 @@ fn main() {
         c_alternate_file_name: [0i8; 14],
     };
 
-    let mut rit = ResourcesItertatorFactory::new(Path::new(""));
-    unsafe {
-        let handle = {
-            let handle = match rit.next() {
-                Some(_) => {
-                    rit.update_find_data(&mut find_data);
-                    let thin_ptr = Box::new(rit);
-                    let mbrit = Box::into_raw(thin_ptr);
-                    mbrit as *mut _ as HANDLE
-                }
-                None => INVALID_HANDLE,
-            };
-            handle
-        };
-        if handle != INVALID_HANDLE {
-            let riit = handle as *mut Box<dyn FindDataUpdater>;
-            //as *mut ResourcesIterator;
-            match (*riit).next() {
-                Some(_) => {
-                    (*riit).update_find_data(&mut find_data);
-                }
-                None => println!("None elem"),
-            }
+    let mut rit = ResourcesIteratorFactory::new(Path::new("/"));
+    let mut next = rit.next();
+    while next.is_some() {
+        unsafe {
+            rit.update_find_data(&mut find_data);
         }
+        // let thin_ptr = Box::new(rit);
+        // let mbrit = Box::into_raw(thin_ptr);
+        // handle = mbrit as *mut _ as HANDLE;
+        next = rit.next()
     }
+
+    let mut rit = ResourcesIteratorFactory::new(Path::new("/docker-desktop"));
+    let mut next = rit.next();
+    while next.is_some() {
+        unsafe {
+            rit.update_find_data(&mut find_data);
+        }
+        // let thin_ptr = Box::new(rit);
+        // let mbrit = Box::into_raw(thin_ptr);
+        // handle = mbrit as *mut _ as HANDLE;
+        next = rit.next()
+    }
+
+    let mut rit = ResourcesIteratorFactory::new(Path::new("/docker-desktop/"));
+    let mut next = rit.next();
+    while next.is_some() {
+        unsafe {
+            rit.update_find_data(&mut find_data);
+        }
+        // let thin_ptr = Box::new(rit);
+        // let mbrit = Box::into_raw(thin_ptr);
+        // handle = mbrit as *mut _ as HANDLE;
+        next = rit.next()
+    }
+
+    let mut rit = ResourcesIteratorFactory::new(Path::new("/docker-desktop/pod"));
+    let mut next = rit.next();
+    while next.is_some() {
+        unsafe {
+            rit.update_find_data(&mut find_data);
+        }
+        // let thin_ptr = Box::new(rit);
+        // let mbrit = Box::into_raw(thin_ptr);
+        // handle = mbrit as *mut _ as HANDLE;
+        next = rit.next()
+    }
+
+
+
     println!("End");
 }
