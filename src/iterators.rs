@@ -70,7 +70,7 @@ impl ResourcesIteratorFactory {
         }
     }
 
-    fn handle_one_component(mut components: Vec<Component>) -> Box<dyn FindDataUpdater> {
+    fn handle_one_component(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
         let component = components[0];
         match component {
             Component::Normal(_) => BaseResourcesIterator::new(),
@@ -78,7 +78,7 @@ impl ResourcesIteratorFactory {
         }
     }
 
-    fn handle_two_components(mut components: Vec<Component>) -> Box<dyn FindDataUpdater> {
+    fn handle_two_components(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
         let config_part = components[0];
         let resource_part = components[1];
         match resource_part {

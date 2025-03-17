@@ -1,30 +1,29 @@
-use consts::FsDefaultParamStruct;
-use consts::RemoteInfoStruct;
-use consts::TLogProc;
-use consts::TProgressProc;
-use consts::TRequestProc;
 use consts::BOOL;
 use consts::FILETIME;
 use consts::FS_EXEC_OK;
 use consts::FS_FILE_OK;
+use consts::FsDefaultParamStruct;
 use consts::HANDLE;
 use consts::HWND;
 use consts::INVALID_HANDLE;
+use consts::RemoteInfoStruct;
+use consts::TLogProc;
+use consts::TProgressProc;
+use consts::TRequestProc;
 use consts::WIN32_FIND_DATAA;
 use iterators::FindDataUpdater;
 use iterators::ResourcesIteratorFactory;
 use std::cell::RefCell;
-use std::ffi::c_char;
-use std::ffi::c_int;
 use std::ffi::CStr;
 use std::ffi::CString;
+use std::ffi::c_char;
+use std::ffi::c_int;
 use std::path::Path;
 
 mod consts;
+mod helper;
 mod iterators;
 mod resources;
-mod helper;
-
 
 // File: lib.rs
 
@@ -61,15 +60,17 @@ pub unsafe extern "C" fn FsInit(
     G_REQUEST_PROC.with(|funcptr| {
         *funcptr.borrow_mut() = Some(p_request_proc);
     });
-    G_LOG_PROC.with(|logger_opt| match *logger_opt.borrow() {
-        Some(logger) => {
-            let c_string = CString::new("FsInit logger").expect("CString::new failed");
-            let ptr = c_string.into_raw();
-            logger(plugin_nr, 0, ptr);
-            let _ = CString::from_raw(ptr as *mut _);
-        }
-        None => eprintln!("FsInit local"),
-    });
+    unsafe {
+        G_LOG_PROC.with(|logger_opt| match *logger_opt.borrow() {
+            Some(logger) => {
+                let c_string = CString::new("FsInit logger").expect("CString::new failed");
+                let ptr = c_string.into_raw();
+                logger(plugin_nr, 0, ptr);
+                let _ = CString::from_raw(ptr as *mut _);
+            }
+            None => eprintln!("FsInit local"),
+        });
+    }
     tracing_subscriber::fmt::init();
     eprintln!("FsInit exit");
 
@@ -82,25 +83,27 @@ pub unsafe extern "C" fn FsFindFirst(
     find_data: *mut WIN32_FIND_DATAA,
 ) -> HANDLE {
     eprintln!("FsFindFirst enter");
-    let path_str = CStr::from_ptr(path).to_string_lossy();
-    eprintln!("FsFindFirst on path {}", path_str);
-    let path = Path::new(path_str.as_ref());
-    let parent = path.parent();
-    eprintln!("Parent is none {}", parent.is_none());
-    let mut rit = ResourcesIteratorFactory::new(path);
+    unsafe {
+        let path_str = CStr::from_ptr(path).to_string_lossy();
+        eprintln!("FsFindFirst on path {}", path_str);
+        let path = Path::new(path_str.as_ref());
+        let parent = path.parent();
+        eprintln!("Parent is none {}", parent.is_none());
+        let mut rit = ResourcesIteratorFactory::new(path);
 
-    let handle = match (*rit).next() {
-        Some(_) => {
-            // Thin pointer
-            rit.update_find_data(find_data);
-            let thin_ptr = Box::new(rit);
-            let mbrit = Box::into_raw(thin_ptr);
-            mbrit as *mut _ as HANDLE
-        }
-        None => INVALID_HANDLE,
-    };
-    eprintln!("FsFindFirst exit");
-    handle
+        let handle = match (*rit).next() {
+            Some(_) => {
+                // Thin pointer
+                rit.update_find_data(find_data);
+                let thin_ptr = Box::new(rit);
+                let mbrit = Box::into_raw(thin_ptr);
+                mbrit as *mut _ as HANDLE
+            }
+            None => INVALID_HANDLE,
+        };
+        eprintln!("FsFindFirst exit");
+        handle
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -112,14 +115,16 @@ pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATA
             //= hdl as *mut Box<ResourcesIterator>;
             //let mut riit: ManuallyDrop<Box<ResourcesIterator>> = unsafe { (hdl as ManuallyDrop<Box<ResourcesIterator>>) };
             //as *mut ResourcesIterator;
-            match (*riit).next() {
-                Some(_) => {
-                    (*riit).update_find_data(find_data);
-                    1
-                }
-                None => {
-                    println!("None elem");
-                    0
+            unsafe {
+                match (*riit).next() {
+                    Some(_) => {
+                        (*riit).update_find_data(find_data);
+                        1
+                    }
+                    None => {
+                        println!("None elem");
+                        0
+                    }
                 }
             }
         } else {
@@ -138,7 +143,9 @@ pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
     //    let mdrit: &mut ManuallyDrop<ResourcesIterator> = unsafe { &mut *(hdl as *mut ManuallyDrop<ResourcesIterator>) };
     //    ManuallyDrop::into_inner(&mdrit);
     if hdl != INVALID_HANDLE {
-        let _ = Box::from_raw(hdl as *mut Box<dyn FindDataUpdater>);
+        unsafe {
+            let _ = Box::from_raw(hdl as *mut Box<dyn FindDataUpdater>);
+        }
     }
     eprintln!("FsFindClose exit");
     FS_FILE_OK
@@ -234,15 +241,16 @@ pub unsafe extern "C" fn FsDisconnect(_disconnect_root: *mut c_char) -> BOOL {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsSetDefaultParams(dps: *mut FsDefaultParamStruct) {
     eprintln!("FsSetDefaultParams enter");
-    let str = CStr::from_ptr((*dps).default_ini_name.as_ptr()).to_string_lossy();
-
-    eprintln!(
-        "FsSetDefaultParams  {} version {}:{} size {}",
-        str,
-        (*dps).plugin_interface_version_hi,
-        (*dps).plugin_interface_version_low,
-        (*dps).size
-    );
+    unsafe {
+        let str = CStr::from_ptr((*dps).default_ini_name.as_ptr()).to_string_lossy();
+        eprintln!(
+            "FsSetDefaultParams  {} version {}:{} size {}",
+            str,
+            (*dps).plugin_interface_version_hi,
+            (*dps).plugin_interface_version_low,
+            (*dps).size
+        );
+    }
     eprintln!("FsSetDefaultParams exit");
 }
 
@@ -252,12 +260,14 @@ pub unsafe extern "C" fn FsGetDefRootName(def_root_name: *mut c_char, maxlen: c_
     let plugin_name = "k8s";
     let bytes = plugin_name.as_bytes();
     let len = bytes.len();
-    std::ptr::copy(
-        plugin_name.as_bytes().as_ptr().cast(),
-        def_root_name,
-        maxlen as usize,
-    );
-    std::ptr::write(def_root_name.offset(len as isize) as *mut u8, 0u8);
+    unsafe {
+        std::ptr::copy(
+            plugin_name.as_bytes().as_ptr().cast(),
+            def_root_name,
+            maxlen as usize,
+        );
+        std::ptr::write(def_root_name.offset(len as isize) as *mut u8, 0u8);
+    }
     eprintln!("FsGetDefRootName exit");
 }
 
