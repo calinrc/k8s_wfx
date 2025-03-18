@@ -35,18 +35,16 @@ impl Iterator for ConfigsIterator {
 impl FindDataUpdater for ConfigsIterator {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
         match &self.next_elem {
-            Some(next_elem) => {
-                let ct_unwrap = FILETIME::default();
-
-                unsafe { *find_data }.dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE;
-                unsafe { *find_data }.ft_creation_time = ct_unwrap;
-                unsafe { *find_data }.ft_last_access_time = ct_unwrap;
-                unsafe { *find_data }.ft_last_write_time = ct_unwrap;
-                unsafe { *find_data }.n_file_size_high = 0;
-                unsafe { *find_data }.n_file_size_low = 0;
-                unsafe { *find_data }.dw_reserved_0 = 0;
-                unsafe { *find_data }.dw_reserved_1 = 0;
-                let res_str = &next_elem.name;
+            Some(res) => {
+                (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE | consts::FILE_ATTRIBUTE_DIRECTORY;
+                (*find_data).ft_creation_time = FILETIME::default();
+                (*find_data).ft_last_access_time = FILETIME::default();
+                (*find_data).ft_last_write_time = FILETIME::default();
+                (*find_data).n_file_size_high = 0;
+                (*find_data).n_file_size_low = 0;
+                (*find_data).dw_reserved_0 = consts::S_IFDIR | consts::S_IRUSR | consts::S_IWUSR | consts::S_IXUSR;
+                (*find_data).dw_reserved_1 = 0;
+                let res_str = &res.name;
                 let bytes = res_str.as_bytes();
                 let len = bytes.len();
 
@@ -65,7 +63,7 @@ impl FindDataUpdater for ConfigsIterator {
                 };
 
                 //(*find_data).c_file_name= [0i8;260];
-                unsafe { *find_data }.c_alternate_file_name = [0i8; 14];
+                (*find_data).c_alternate_file_name = [0i8; 14];
 
                 println!("Config resource {}", res_str)
             }
@@ -77,6 +75,7 @@ impl FindDataUpdater for ConfigsIterator {
 impl K8sResourceIterator<NamedContext> for ConfigsIterator {}
 
 impl ConfigsIterator {
+
     pub fn new() -> Box<Self> {
         let v = Self::get_resources();
         Box::new(Self {

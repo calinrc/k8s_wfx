@@ -26,42 +26,12 @@ pub struct ResourcesIteratorFactory;
 
 impl ResourcesIteratorFactory {
     pub fn new(_path: &Path) -> Box<dyn FindDataUpdater> {
-        // return res_iter;
-
-        // if _path.parent().is_none() {
-        //     Box::new(BaseResourcesIterator {
-        //         it: Box::new(resources::K8SResources::iterator()),
-        //         next_elem: None,
-        //     })
-        // } else {
-        //     let mut components = _path.components();
-        //     let _rd = components.next(); //root dir
-        //     let fp = components.next(); // first part
-        //     let iterator_info = fp
-        //         .map(|c| c.as_os_str().to_str())
-        //         .flatten()
-        //         .map(|res_name| resources::K8SResources::from_str(res_name))
-        //         .flatten()
-        //         .and_then(|res| match res {
-        //             resources::K8SResources::Pod => Some(PodsIterator::new()),
-        //             _ => None,
-        //         });
-        //
-        //     if let Some(it) = iterator_info {
-        //         it
-        //     } else {
-        //         Box::new(DummyIterator {})
-        //     }
-        // }
-
         let filtered_components = _path.components().filter(|c| match c {
             Component::Normal(_) => true,
             _ => false,
         });
         let components = filtered_components.collect::<Vec<_>>();
-        let c2 = components.len();
-
-        let comp_count = c2;
+        let comp_count = components.len();
         match comp_count {
             0 => ConfigsIterator::new(),
             1 => Self::handle_one_component(components),
@@ -92,21 +62,6 @@ impl ResourcesIteratorFactory {
             },
             _ => DummyIterator::new()
         }
-
-        // let iterator_info = resource_part
-        //     .map(|c| c.as_os_str().to_str())
-        //     .flatten()
-        //     .map(|res_name| resources::K8SResources::from_str(res_name))
-        //     .flatten()
-        //     .and_then(|res| {
-        //         let fupd: Option<Box<dyn FindDataUpdater>> = match res {
-        //             resources::K8SResources::Pod => Some(PodsIterator::new()),
-        //             resources::K8SResources::Namespace => Some(NamespacesIterator::new()),
-        //             _ => None,
-        //         };
-        //         fupd
-        //     });
-        // iterator_info.unwrap_or_else(|| DummyIterator::new())
     }
 }
 
@@ -144,15 +99,15 @@ impl FindDataUpdater for BaseResourcesIterator<'_> {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
         match self.next_elem {
             Some(res) => {
-                unsafe { *find_data }.dw_file_attributes =
+                (*find_data).dw_file_attributes =
                     consts::FILE_ATTRIBUTE_UNIX_MODE | consts::FILE_ATTRIBUTE_DIRECTORY;
-                unsafe { *find_data }.ft_creation_time = FILETIME::default();
-                unsafe { *find_data }.ft_last_access_time = FILETIME::default();
-                unsafe { *find_data }.ft_last_write_time = FILETIME::default();
-                unsafe { *find_data }.n_file_size_high = 0;
-                unsafe { *find_data }.n_file_size_low = 0;
-                unsafe { *find_data }.dw_reserved_0 = 0;
-                unsafe { *find_data }.dw_reserved_1 = 0;
+                (*find_data).ft_creation_time = FILETIME::default();
+                (*find_data).ft_last_access_time = FILETIME::default();
+                (*find_data).ft_last_write_time = FILETIME::default();
+                (*find_data).n_file_size_high = 0;
+                (*find_data).n_file_size_low = 0;
+                (*find_data).dw_reserved_0 = consts::S_IFDIR;
+                (*find_data).dw_reserved_1 = 0;
                 let res_str = res.as_res_str();
                 let bytes = res_str.as_bytes();
                 let len = bytes.len();
@@ -172,7 +127,7 @@ impl FindDataUpdater for BaseResourcesIterator<'_> {
                 };
 
                 //(*find_data).c_file_name= [0i8;260];
-                unsafe { *find_data }.c_alternate_file_name = [0i8; 14];
+                (*find_data).c_alternate_file_name = [0i8; 14];
 
                 println!("K8SResources {}", res)
             }

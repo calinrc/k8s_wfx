@@ -44,14 +44,14 @@ impl FindDataUpdater for PodsIterator {
                     .map(|(l, h)| FILETIME::new(l as u32, h as u32));
                 let ct_unwrap = FILETIME::default(); //ct.unwrap_or( FILETIME::default());
 
-                unsafe { *find_data }.dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE;
-                unsafe { *find_data }.ft_creation_time = ct_unwrap;
-                unsafe { *find_data }.ft_last_access_time = ct_unwrap;
-                unsafe { *find_data }.ft_last_write_time = ct_unwrap;
-                unsafe { *find_data }.n_file_size_high = 0;
-                unsafe { *find_data }.n_file_size_low = 0;
-                unsafe { *find_data }.dw_reserved_0 = 0;
-                unsafe { *find_data }.dw_reserved_1 = 0;
+                (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE;
+                (*find_data).ft_creation_time = ct_unwrap;
+                (*find_data).ft_last_access_time = ct_unwrap;
+                (*find_data).ft_last_write_time = ct_unwrap;
+                (*find_data).n_file_size_high = 0;
+                (*find_data).n_file_size_low = 0;
+                (*find_data).dw_reserved_0 = 0;
+                (*find_data).dw_reserved_1 = 0;
                 let res_str = next_elem.name_any();
                 let bytes = res_str.as_bytes();
                 let len = bytes.len();
@@ -67,7 +67,7 @@ impl FindDataUpdater for PodsIterator {
                 ) };
 
                 //(*find_data).c_file_name= [0i8;260];
-                unsafe { *find_data }.c_alternate_file_name = [0i8; 14];
+                (*find_data).c_alternate_file_name = [0i8; 14];
 
                 println!("Pod resource {}", res_str)
             }
