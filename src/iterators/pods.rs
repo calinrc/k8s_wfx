@@ -41,13 +41,12 @@ impl FindDataUpdater for PodsIterator {
                 let creation_time_opt = next_elem.creation_timestamp();
                 let ct = creation_time_opt
                     .map(|ts| helper::to_split_file_time(ts.0.timestamp_millis()))
-                    .map(|(l, h)| FILETIME::new(l as u32, h as u32));
-                let ct_unwrap = FILETIME::default(); //ct.unwrap_or( FILETIME::default());
-
+                    .map(|(l, h)| FILETIME::new(l as u32, h as u32))
+                    .unwrap_or(FILETIME::default());
                 (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE;
-                (*find_data).ft_creation_time = ct_unwrap;
-                (*find_data).ft_last_access_time = ct_unwrap;
-                (*find_data).ft_last_write_time = ct_unwrap;
+                (*find_data).ft_creation_time = ct;
+                (*find_data).ft_last_access_time = ct;
+                (*find_data).ft_last_write_time = ct;
                 (*find_data).n_file_size_high = 0;
                 (*find_data).n_file_size_low = 0;
                 (*find_data).dw_reserved_0 = 0;

@@ -26,6 +26,18 @@ fn main() {
         c_alternate_file_name: [0i8; 14],
     };
 
+    let mut rit = ResourcesIteratorFactory::new(Path::new("/docker-desktop/pod"));
+    let mut next = rit.next();
+    while next.is_some() {
+        unsafe {
+            rit.update_find_data(&mut find_data);
+        }
+        // let thin_ptr = Box::new(rit);
+        // let mbrit = Box::into_raw(thin_ptr);
+        // handle = mbrit as *mut _ as HANDLE;
+        next = rit.next()
+    }
+
     let mut rit = ResourcesIteratorFactory::new(Path::new("/"));
     let mut next = rit.next();
     while next.is_some() {
@@ -39,18 +51,6 @@ fn main() {
     }
 
     let mut rit = ResourcesIteratorFactory::new(Path::new("/docker-desktop"));
-    let mut next = rit.next();
-    while next.is_some() {
-        unsafe {
-            rit.update_find_data(&mut find_data);
-        }
-        // let thin_ptr = Box::new(rit);
-        // let mbrit = Box::into_raw(thin_ptr);
-        // handle = mbrit as *mut _ as HANDLE;
-        next = rit.next()
-    }
-
-    let mut rit = ResourcesIteratorFactory::new(Path::new("/docker-desktop/"));
     let mut next = rit.next();
     while next.is_some() {
         unsafe {
