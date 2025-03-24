@@ -1,24 +1,29 @@
-use crate::consts;
-use crate::consts::FILETIME;
 use crate::consts::WIN32_FIND_DATAA;
 use crate::iterators::configs::ConfigsIterator;
+use crate::iterators::deployments::DeploymentsIterator;
 use crate::iterators::dummy::DummyIterator;
+use crate::iterators::jobs::JobsIterator;
 use crate::iterators::namespaces::NamespacesIterator;
+use crate::iterators::nodes::NodesIterator;
 use crate::iterators::pods::PodsIterator;
+use crate::iterators::static_resource::StaticListResourcesIterator;
 use crate::resources;
 use core::future::Future;
 use std::path::{Component, Path};
-use std::slice::Iter;
 
 pub mod configs;
+mod deployments;
 pub mod dummy;
+mod jobs;
 mod namespaces;
+mod nodes;
 pub mod pods;
+mod static_resource;
 
 #[derive(Debug, Default)]
-pub struct ReasourceData;
+pub struct ResourceData;
 
-pub trait FindDataUpdater: Iterator<Item = ReasourceData> {
+pub trait FindDataUpdater: Iterator<Item = ResourceData> {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA);
 }
 
@@ -34,111 +39,42 @@ impl ResourcesIteratorFactory {
         let comp_count = components.len();
         match comp_count {
             0 => ConfigsIterator::new(),
-            1 => Self::handle_one_component(components),
-            2 => Self::handle_two_components(components),
+            1 => Self::handle_resources_component(components),
+            2 => Self::handle_detailed_component(components),
             _ => DummyIterator::new(),
         }
     }
 
-    fn handle_one_component(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
+    fn handle_resources_component(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
         let component = components[0];
         match component {
-            Component::Normal(_) => BaseResourcesIterator::new(),
+            Component::Normal(_) => StaticListResourcesIterator::new(),
             _ => DummyIterator::new(),
         }
     }
 
-    fn handle_two_components(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
-        let config_part = components[0];
+    fn handle_detailed_component(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
+        let _config_part = components[0];
         let resource_part = components[1];
+        let ns = String::from("kube-system");
         match resource_part {
             Component::Normal(res_name) => {
                 match resources::K8SResources::from_str(res_name.to_str().unwrap()) {
-                    Some(resources::K8SResources::Pod) => PodsIterator::new(),
+                    Some(resources::K8SResources::Pod) => PodsIterator::new(ns.as_str()),
                     Some(resources::K8SResources::Namespace) => NamespacesIterator::new(),
-                    _ => DummyIterator::new()
+                    Some(resources::K8SResources::Node) => NodesIterator::new(),
+                    Some(resources::K8SResources::Job) => JobsIterator::new(ns.as_str()),
+                    Some(resources::K8SResources::Deployment) => DeploymentsIterator::new(ns.as_str()),
+
+                    _ => DummyIterator::new(),
                 }
-
-            },
-            _ => DummyIterator::new()
+            }
+            _ => DummyIterator::new(),
         }
     }
 }
 
-#[derive(Debug)]
-pub struct BaseResourcesIterator<'a> {
-    it: Box<Iter<'static, resources::K8SResources>>,
-    next_elem: Option<&'a resources::K8SResources>,
-}
-
-impl BaseResourcesIterator<'_> {
-    pub fn new() -> Box<Self> {
-        return Box::new(Self {
-            it: Box::new(resources::K8SResources::iterator()),
-            next_elem: None,
-        });
-    }
-}
-impl Iterator for BaseResourcesIterator<'_> {
-    type Item = ReasourceData;
-    fn next(&mut self) -> Option<ReasourceData> {
-        let result = self.it.next();
-        self.next_elem = result;
-
-        self.next_elem.map(|_| ReasourceData::default())
-    }
-}
-
-impl Drop for BaseResourcesIterator<'_> {
-    fn drop(&mut self) {
-        println!("Drop BaseResourcesIterator")
-    }
-}
-
-impl FindDataUpdater for BaseResourcesIterator<'_> {
-    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
-        match self.next_elem {
-            Some(res) => {
-                (*find_data).dw_file_attributes =
-                    consts::FILE_ATTRIBUTE_UNIX_MODE | consts::FILE_ATTRIBUTE_DIRECTORY;
-                (*find_data).ft_creation_time = FILETIME::default();
-                (*find_data).ft_last_access_time = FILETIME::default();
-                (*find_data).ft_last_write_time = FILETIME::default();
-                (*find_data).n_file_size_high = 0;
-                (*find_data).n_file_size_low = 0;
-                (*find_data).dw_reserved_0 = consts::S_IFDIR;
-                (*find_data).dw_reserved_1 = 0;
-                let res_str = res.as_res_str();
-                let bytes = res_str.as_bytes();
-                let len = bytes.len();
-
-                unsafe {
-                    std::ptr::copy(
-                        bytes.as_ptr().cast(),
-                        (*find_data).c_file_name.as_mut_ptr(),
-                        consts::MAX_PATH,
-                    )
-                };
-                unsafe {
-                    std::ptr::write(
-                        (*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8,
-                        0u8,
-                    )
-                };
-
-                //(*find_data).c_file_name= [0i8;260];
-                (*find_data).c_alternate_file_name = [0i8; 14];
-
-                println!("K8SResources {}", res)
-            }
-            None => {
-                eprint!("Unable to update_find_data. None resource")
-            }
-        }
-    }
-}
-
-trait K8sResourceIterator<T> {
+trait K8sAsyncResource<T> {
     fn async_to_sync_res(
         future: impl Future<Output = anyhow::Result<Vec<T>>>,
     ) -> anyhow::Result<Vec<T>> {
@@ -146,12 +82,45 @@ trait K8sResourceIterator<T> {
             .enable_all()
             .build();
         runtime_res?.block_on(future)
-        // let _ = match runtime_res {
-        //     Ok(runtime) => { _= runtime.block_on(future);
-        //                         println!("Done listing pods")},
-        //     Err(err) => panic!("Problem opening the file: {:?}", err),
-        // };
+    }
+}
 
-        // Ok(Vec::new())
+trait K8sClusterResourceIterator<T>: K8sAsyncResource<T> {
+    async fn list_cluster_resources() -> anyhow::Result<Vec<T>>;
+
+    fn get_resources() -> Vec<T> {
+        let vec_empt: Vec<T> = Vec::new();
+
+        let runtime_res = Self::async_to_sync_res(Self::list_cluster_resources());
+        match runtime_res {
+            Ok(vec) => vec,
+            Err(_err) => {
+                eprintln!(
+                    "Fail on getting cluster bound resource list {}",
+                    _err.to_string()
+                );
+                vec_empt
+            }
+        }
+    }
+}
+
+trait K8sNamespaceResourceIterator<T>: K8sAsyncResource<T> {
+    async fn list_namespace_resources(namespace: &str) -> anyhow::Result<Vec<T>>;
+
+    fn get_resources(namespace: &str) -> Vec<T> {
+        let vec_empt: Vec<T> = Vec::new();
+
+        let runtime_res = Self::async_to_sync_res(Self::list_namespace_resources(namespace));
+        match runtime_res {
+            Ok(vec) => vec,
+            Err(_err) => {
+                eprintln!(
+                    "Fail on getting namespace bound resource list {}",
+                    _err.to_string()
+                );
+                vec_empt
+            }
+        }
     }
 }

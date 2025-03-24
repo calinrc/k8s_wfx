@@ -1,14 +1,13 @@
-use std::iter::Iterator;
-use k8s_openapi::api::core::v1::{Namespace};
-use crate::iterators::{K8sResourceIterator, ReasourceData};
 use super::FindDataUpdater;
 use crate::consts::FILETIME;
 use crate::consts::WIN32_FIND_DATAA;
+use crate::iterators::{K8sAsyncResource, K8sClusterResourceIterator, ResourceData};
 use crate::{consts, helper};
 use hyper_util::rt::TokioExecutor;
+use k8s_openapi::api::core::v1::Namespace;
 use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
+use std::iter::Iterator;
 use tower::{BoxError, ServiceBuilder};
-
 
 // NamespaceIterator: Iterator for namespaces, similar to PodIterator
 pub struct NamespacesIterator {
@@ -23,12 +22,12 @@ impl Drop for NamespacesIterator {
 }
 
 impl Iterator for NamespacesIterator {
-    type Item = ReasourceData;
-    fn next(&mut self) -> Option<ReasourceData> {
+    type Item = ResourceData;
+    fn next(&mut self) -> Option<ResourceData> {
         let result = self.it.next();
         self.next_elem = result;
         if !self.next_elem.is_none() {
-            Some(ReasourceData::default())
+            Some(ResourceData::default())
         } else {
             None
         }
@@ -56,15 +55,19 @@ impl FindDataUpdater for NamespacesIterator {
                 let bytes = res_str.as_bytes();
                 let len = bytes.len();
 
-                unsafe { std::ptr::copy(
-                    bytes.as_ptr().cast(),
-                    (*find_data).c_file_name.as_mut_ptr(),
-                    consts::MAX_PATH,
-                ) };
-                unsafe { std::ptr::write(
-                    (*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8,
-                    0u8,
-                ) };
+                unsafe {
+                    std::ptr::copy(
+                        bytes.as_ptr().cast(),
+                        (*find_data).c_file_name.as_mut_ptr(),
+                        consts::MAX_PATH,
+                    )
+                };
+                unsafe {
+                    std::ptr::write(
+                        (*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8,
+                        0u8,
+                    )
+                };
 
                 //(*find_data).c_file_name= [0i8;260];
                 (*find_data).c_alternate_file_name = [0i8; 14];
@@ -76,7 +79,31 @@ impl FindDataUpdater for NamespacesIterator {
     }
 }
 
-impl K8sResourceIterator<Namespace> for NamespacesIterator {
+impl K8sAsyncResource<Namespace> for NamespacesIterator {}
+
+impl K8sClusterResourceIterator<Namespace> for NamespacesIterator {
+    async fn list_cluster_resources() -> anyhow::Result<Vec<Namespace>> {
+        let config = Config::infer().await?;
+        let https = config.openssl_https_connector()?;
+        let mut vec = Vec::new();
+        let service = ServiceBuilder::new()
+            .layer(config.base_uri_layer())
+            .option_layer(config.auth_layer()?)
+            .map_err(BoxError::from)
+            .service(
+                hyper_util::client::legacy::Client::builder(TokioExecutor::new()).build(https),
+            );
+        // .service(hyper::Client::builder().build(https));
+
+        let client = Client::new(service, &config.default_namespace);
+
+        let res_api: Api<Namespace> = Api::all(client);
+        for p in res_api.list(&Default::default()).await? {
+            vec.push(p.clone());
+            //info!("{}", p.name_any());
+        }
+        Ok(vec)
+    }
 }
 
 impl NamespacesIterator {
@@ -87,38 +114,4 @@ impl NamespacesIterator {
             next_elem: None,
         })
     }
-    fn get_resources() -> Vec<Namespace> {
-        let vec_empt: Vec<Namespace> = Vec::new();
-
-        let runtime_res = Self::async_to_sync_res(list_namespaces());
-        match runtime_res {
-            Ok(vec) => vec,
-            Err(_err) => {
-                eprintln!("Fail on getting Namespace list {}", _err.to_string());
-                vec_empt
-            }
-        }
-    }
-
-}
-
-pub async fn list_namespaces() -> anyhow::Result<Vec<Namespace>> {
-    let config = Config::infer().await?;
-    let https = config.openssl_https_connector()?;
-    let mut vec = Vec::new();
-    let service = ServiceBuilder::new()
-        .layer(config.base_uri_layer())
-        .option_layer(config.auth_layer()?)
-        .map_err(BoxError::from)
-        .service(hyper_util::client::legacy::Client::builder(TokioExecutor::new()).build(https));
-    // .service(hyper::Client::builder().build(https));
-
-    let client = Client::new(service, &config.default_namespace);
-
-    let namespaces: Api<Namespace> = Api::all(client);
-    for p in namespaces.list(&Default::default()).await? {
-        vec.push(p.clone());
-        //info!("{}", p.name_any());
-    }
-    Ok(vec)
 }

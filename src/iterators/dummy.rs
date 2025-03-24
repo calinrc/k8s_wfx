@@ -1,15 +1,14 @@
 use crate::consts::WIN32_FIND_DATAA;
-use crate::iterators::ReasourceData;
+use crate::iterators::ResourceData;
 
 use super::FindDataUpdater;
 
 pub struct DummyIterator {}
 
-impl DummyIterator{
+impl DummyIterator {
     pub fn new() -> Box<Self> {
         Box::new(Self {})
     }
-
 }
 
 impl Drop for DummyIterator {
@@ -19,8 +18,8 @@ impl Drop for DummyIterator {
 }
 
 impl Iterator for DummyIterator {
-    type Item = ReasourceData;
-    fn next(&mut self) -> Option<ReasourceData> {
+    type Item = ResourceData;
+    fn next(&mut self) -> Option<ResourceData> {
         None
     }
 }

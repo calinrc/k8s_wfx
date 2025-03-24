@@ -1,7 +1,6 @@
 use std::fmt;
 use std::slice::Iter;
 
-
 #[derive(Debug)]
 pub enum K8SResources {
     ConfigMap,
@@ -55,7 +54,6 @@ const RESOURCES_ARR: [K8SResources; 24] = [
     K8SResources::RoleBinding,
     K8SResources::Role,
 ];
-
 
 impl fmt::Display for K8SResources {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -148,7 +146,7 @@ impl K8SResources {
             "clusterrole" => Some(K8SResources::ClusterRole),
             "rolebinding" => Some(K8SResources::RoleBinding),
             "role" => Some(K8SResources::Role),
-            _ => None
+            _ => None,
         }
     }
 }

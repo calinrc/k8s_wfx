@@ -94,7 +94,6 @@ pub const S_IRUSR: DWORD = 0o0400; /* Read by owner. */
 pub const S_IWUSR: DWORD = 0o0200; /* Write by owner. */
 pub const S_IXUSR: DWORD = 0o0100; /* Execute by owner. */
 
-
 pub type TProgressProc = unsafe extern "C" fn(c_int, *mut c_char, *mut c_char, c_int) -> c_int;
 pub type TLogProc = unsafe extern "C" fn(i32, i32, *mut c_char);
 pub type TRequestProc =

@@ -74,7 +74,5 @@ fn main() {
         next = rit.next()
     }
 
-
-
     println!("End");
 }

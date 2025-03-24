@@ -1,26 +1,27 @@
 use super::FindDataUpdater;
-use crate::consts;
 use crate::consts::FILETIME;
 use crate::consts::WIN32_FIND_DATAA;
-use crate::helper;
-use crate::iterators::{K8sAsyncResource, K8sNamespaceResourceIterator, ResourceData};
+use crate::iterators::{K8sAsyncResource, K8sClusterResourceIterator, ResourceData};
+use crate::{consts, helper};
 use hyper_util::rt::TokioExecutor;
-use k8s_openapi::api::core::v1::Pod;
+use k8s_openapi::api::core::v1::Node;
 use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
+use std::iter::Iterator;
 use tower::{BoxError, ServiceBuilder};
 
-pub struct PodsIterator {
-    it: Box<std::vec::IntoIter<Pod>>,
-    next_elem: Option<Pod>,
+// NodesIterator: Iterator for node, similar to PodIterator
+pub struct NodesIterator {
+    it: Box<std::vec::IntoIter<Node>>,
+    next_elem: Option<Node>,
 }
 
-impl Drop for PodsIterator {
+impl Drop for NodesIterator {
     fn drop(&mut self) {
-        println!("Drop PodsIterator")
+        println!("Drop NodesIterator")
     }
 }
 
-impl Iterator for PodsIterator {
+impl Iterator for NodesIterator {
     type Item = ResourceData;
     fn next(&mut self) -> Option<ResourceData> {
         let result = self.it.next();
@@ -33,7 +34,7 @@ impl Iterator for PodsIterator {
     }
 }
 
-impl FindDataUpdater for PodsIterator {
+impl FindDataUpdater for NodesIterator {
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
         match &self.next_elem {
             Some(next_elem) => {
@@ -71,17 +72,17 @@ impl FindDataUpdater for PodsIterator {
                 //(*find_data).c_file_name= [0i8;260];
                 (*find_data).c_alternate_file_name = [0i8; 14];
 
-                println!("Pod resource {}", res_str)
+                println!("Node resource {}", res_str)
             }
-            None => println!("update_find_data on None Pods"),
+            None => println!("update_find_data on None Node"),
         }
     }
 }
 
-impl K8sAsyncResource<Pod> for PodsIterator {}
+impl K8sAsyncResource<Node> for NodesIterator {}
 
-impl K8sNamespaceResourceIterator<Pod> for PodsIterator {
-    async fn list_namespace_resources(namespace: &str) -> anyhow::Result<Vec<Pod>> {
+impl K8sClusterResourceIterator<Node> for NodesIterator {
+    async fn list_cluster_resources() -> anyhow::Result<Vec<Node>> {
         let config = Config::infer().await?;
         let https = config.openssl_https_connector()?;
         let mut vec = Vec::new();
@@ -94,9 +95,9 @@ impl K8sNamespaceResourceIterator<Pod> for PodsIterator {
             );
         // .service(hyper::Client::builder().build(https));
 
-        let client = Client::new(service, namespace);
+        let client = Client::new(service, &config.default_namespace);
 
-        let res_api: Api<Pod> = Api::namespaced(client, &namespace);
+        let res_api: Api<Node> = Api::all(client);
         for p in res_api.list(&Default::default()).await? {
             vec.push(p.clone());
             //info!("{}", p.name_any());
@@ -105,9 +106,9 @@ impl K8sNamespaceResourceIterator<Pod> for PodsIterator {
     }
 }
 
-impl PodsIterator {
-    pub fn new(namespace: &str) -> Box<Self> {
-        let v = Self::get_resources(namespace);
+impl NodesIterator {
+    pub fn new() -> Box<Self> {
+        let v = Self::get_resources();
         Box::new(Self {
             it: Box::new(v.into_iter()),
             next_elem: None,
