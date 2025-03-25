@@ -1,4 +1,4 @@
-use crate::consts::WIN32_FIND_DATAA;
+use crate::consts::{FILETIME, WIN32_FIND_DATAA};
 use crate::iterators::configs::ConfigsIterator;
 use crate::iterators::deployments::DeploymentsIterator;
 use crate::iterators::dummy::DummyIterator;
@@ -7,8 +7,9 @@ use crate::iterators::namespaces::NamespacesIterator;
 use crate::iterators::nodes::NodesIterator;
 use crate::iterators::pods::PodsIterator;
 use crate::iterators::static_resource::StaticListResourcesIterator;
-use crate::resources;
+use crate::{consts, helper, resources};
 use core::future::Future;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use std::path::{Component, Path};
 
 pub mod configs;
@@ -24,7 +25,54 @@ mod static_resource;
 pub struct ResourceData;
 
 pub trait FindDataUpdater: Iterator<Item = ResourceData> {
-    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA);
+    fn creation_time(&self) -> Option<Time>;
+
+    fn artifact_name(&self) -> String;
+
+    fn has_next(&self) -> bool;
+
+    unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
+        if self.has_next() {
+            let creation_time_opt = self.creation_time();
+            let name = self.artifact_name();
+            let ct = creation_time_opt
+                .clone()
+                .map(|ts| helper::to_split_file_time(ts.0.timestamp_millis()))
+                .map(|(l, h)| FILETIME::new(l as u32, h as u32))
+                .unwrap_or(FILETIME::default());
+            (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE;
+            (*find_data).ft_creation_time = ct;
+            (*find_data).ft_last_access_time = ct;
+            (*find_data).ft_last_write_time = ct;
+            (*find_data).n_file_size_high = 0;
+            (*find_data).n_file_size_low = 0;
+            (*find_data).dw_reserved_0 = 0;
+            (*find_data).dw_reserved_1 = 0;
+            let bytes = name.as_bytes();
+            let len = bytes.len();
+
+            unsafe {
+                std::ptr::copy(
+                    bytes.as_ptr().cast(),
+                    (*find_data).c_file_name.as_mut_ptr(),
+                    consts::MAX_PATH,
+                )
+            };
+            unsafe {
+                std::ptr::write(
+                    (*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8,
+                    0u8,
+                )
+            };
+
+            //(*find_data).c_file_name= [0i8;260];
+            (*find_data).c_alternate_file_name = [0i8; 14];
+
+            println!("Resource {}", name)
+        } else {
+            println!("update_find_data on None")
+        }
+    }
 }
 
 pub struct ResourcesIteratorFactory;
@@ -64,7 +112,9 @@ impl ResourcesIteratorFactory {
                     Some(resources::K8SResources::Namespace) => NamespacesIterator::new(),
                     Some(resources::K8SResources::Node) => NodesIterator::new(),
                     Some(resources::K8SResources::Job) => JobsIterator::new(ns.as_str()),
-                    Some(resources::K8SResources::Deployment) => DeploymentsIterator::new(ns.as_str()),
+                    Some(resources::K8SResources::Deployment) => {
+                        DeploymentsIterator::new(ns.as_str())
+                    }
 
                     _ => DummyIterator::new(),
                 }

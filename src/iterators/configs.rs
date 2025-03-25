@@ -1,8 +1,9 @@
-use super::{FindDataUpdater, K8sAsyncResource};
+use super::FindDataUpdater;
 use crate::consts;
 use crate::consts::FILETIME;
 use crate::consts::WIN32_FIND_DATAA;
-use crate::iterators::{K8sClusterResourceIterator, ResourceData};
+use crate::iterators::{K8sAsyncResource, K8sClusterResourceIterator, ResourceData};
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::config::Kubeconfig;
 use kube::config::NamedContext;
 
@@ -33,6 +34,18 @@ impl Iterator for ConfigsIterator {
 }
 
 impl FindDataUpdater for ConfigsIterator {
+    fn creation_time(&self) -> Option<Time> {
+        None
+    }
+
+    fn artifact_name(&self) -> String {
+        String::from("")
+    }
+
+    fn has_next(&self) -> bool {
+        self.next_elem.is_none()
+    }
+
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
         match &self.next_elem {
             Some(res) => {

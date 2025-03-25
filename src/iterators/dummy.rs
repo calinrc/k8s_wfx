@@ -1,5 +1,6 @@
 use crate::consts::WIN32_FIND_DATAA;
 use crate::iterators::ResourceData;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 
 use super::FindDataUpdater;
 
@@ -24,5 +25,17 @@ impl Iterator for DummyIterator {
     }
 }
 impl FindDataUpdater for DummyIterator {
+    fn creation_time(&self) -> Option<Time> {
+        None
+    }
+
+    fn artifact_name(&self) -> String {
+        String::from("")
+    }
+
+    fn has_next(&self) -> bool {
+        false
+    }
+
     unsafe fn update_find_data(&self, _find_data: *mut WIN32_FIND_DATAA) {}
 }
