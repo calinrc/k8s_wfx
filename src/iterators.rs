@@ -9,8 +9,17 @@ use crate::iterators::pods::PodsIterator;
 use crate::iterators::static_resource::StaticListResourcesIterator;
 use crate::{consts, helper, resources};
 use core::future::Future;
+use hyper_util::rt::TokioExecutor;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
+use kube::client::ConfigExt;
+use kube::config::KubeconfigError;
+use kube::{
+    Client,
+    config::{Config, KubeConfigOptions, Kubeconfig},
+};
+use std::error::Error;
 use std::path::{Component, Path};
+use tower::{BoxError, ServiceBuilder};
 
 pub mod configs;
 mod deployments;
@@ -105,15 +114,16 @@ impl ResourcesIteratorFactory {
         let _config_part = components[0];
         let resource_part = components[1];
         let ns = String::from("kube-system");
-        match resource_part {
-            Component::Normal(res_name) => {
+        match (resource_part, _config_part) {
+            (Component::Normal(res_name), Component::Normal(config_name)) => {
+                let conf_name = config_name.to_str().unwrap();
                 match resources::K8SResources::from_str(res_name.to_str().unwrap()) {
-                    Some(resources::K8SResources::Pod) => PodsIterator::new(ns.as_str()),
-                    Some(resources::K8SResources::Namespace) => NamespacesIterator::new(),
-                    Some(resources::K8SResources::Node) => NodesIterator::new(),
-                    Some(resources::K8SResources::Job) => JobsIterator::new(ns.as_str()),
+                    Some(resources::K8SResources::Pod) => PodsIterator::new(conf_name, ns.as_str()),
+                    Some(resources::K8SResources::Namespace) => NamespacesIterator::new(conf_name),
+                    Some(resources::K8SResources::Node) => NodesIterator::new(conf_name),
+                    Some(resources::K8SResources::Job) => JobsIterator::new(conf_name, ns.as_str()),
                     Some(resources::K8SResources::Deployment) => {
-                        DeploymentsIterator::new(ns.as_str())
+                        DeploymentsIterator::new(conf_name, ns.as_str())
                     }
 
                     _ => DummyIterator::new(),
@@ -133,15 +143,58 @@ trait K8sAsyncResource<T> {
             .build();
         runtime_res?.block_on(future)
     }
+
+    async fn create_config_from_named_context(
+        kubeconfig: Kubeconfig,
+        config_name: &str,
+    ) -> Result<Config, KubeconfigError> {
+        // Find the NamedContext with the matching name
+        let named_context = kubeconfig
+            .contexts
+            .iter()
+            .find(|nc| nc.name == config_name)
+            .ok_or_else(|| KubeconfigError::LoadClusterOfContext(config_name.to_string()))?;
+
+        let options = KubeConfigOptions {
+            context: Some(config_name.to_string()),
+            cluster: None, // We'll use the cluster from the context
+            user: None,    // We'll use the user from the context
+        };
+
+        let mut config = Config::from_kubeconfig(&options).await?;
+        config.apply_debug_overrides();
+        Ok(config)
+    }
+
+    async fn create_kube_client(
+        config_name: &str,
+        namespace: Option<&str>,
+    ) -> anyhow::Result<Client> {
+        let kube_config = Kubeconfig::read()?;
+        let config = Self::create_config_from_named_context(kube_config, config_name).await?;
+        let https = config.openssl_https_connector()?;
+        let service = ServiceBuilder::new()
+            .layer(config.base_uri_layer())
+            .option_layer(config.auth_layer()?)
+            .map_err(BoxError::from)
+            .service(
+                hyper_util::client::legacy::Client::builder(TokioExecutor::new()).build(https),
+            );
+        let client = match namespace {
+            Some(ns) => Client::new(service, ns),
+            _ => Client::new(service, &config.default_namespace),
+        };
+        Ok(client)
+    }
 }
 
 trait K8sClusterResourceIterator<T>: K8sAsyncResource<T> {
-    async fn list_cluster_resources() -> anyhow::Result<Vec<T>>;
+    async fn list_cluster_resources(config_name: &str) -> anyhow::Result<Vec<T>>;
 
-    fn get_resources() -> Vec<T> {
+    fn get_resources(config_name: &str) -> Vec<T> {
         let vec_empt: Vec<T> = Vec::new();
 
-        let runtime_res = Self::async_to_sync_res(Self::list_cluster_resources());
+        let runtime_res = Self::async_to_sync_res(Self::list_cluster_resources(config_name));
         match runtime_res {
             Ok(vec) => vec,
             Err(_err) => {
@@ -156,12 +209,14 @@ trait K8sClusterResourceIterator<T>: K8sAsyncResource<T> {
 }
 
 trait K8sNamespaceResourceIterator<T>: K8sAsyncResource<T> {
-    async fn list_namespace_resources(namespace: &str) -> anyhow::Result<Vec<T>>;
+    async fn list_namespace_resources(config_name: &str, namespace: &str)
+    -> anyhow::Result<Vec<T>>;
 
-    fn get_resources(namespace: &str) -> Vec<T> {
+    fn get_resources(config_name: &str, namespace: &str) -> Vec<T> {
         let vec_empt: Vec<T> = Vec::new();
 
-        let runtime_res = Self::async_to_sync_res(Self::list_namespace_resources(namespace));
+        let runtime_res =
+            Self::async_to_sync_res(Self::list_namespace_resources(config_name, namespace));
         match runtime_res {
             Ok(vec) => vec,
             Err(_err) => {

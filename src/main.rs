@@ -61,8 +61,10 @@ fn main() {
         // handle = mbrit as *mut _ as HANDLE;
         next = rit.next()
     }
-
-    let mut rit = ResourcesIteratorFactory::new(Path::new("/docker-desktop/pod"));
+    println!("List Pods on docker-desktop context");
+    let mut rit = ResourcesIteratorFactory::new(Path::new(
+        "/gke_infinite-maxim-389211_europe-west4-b_mlpdev-dev/pod",
+    ));
     let mut next = rit.next();
     while next.is_some() {
         unsafe {
@@ -73,6 +75,7 @@ fn main() {
         // handle = mbrit as *mut _ as HANDLE;
         next = rit.next()
     }
+    println!("End list Pods on docker-desktop context");
 
     println!("End");
 }

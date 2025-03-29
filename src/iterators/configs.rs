@@ -35,15 +35,15 @@ impl Iterator for ConfigsIterator {
 
 impl FindDataUpdater for ConfigsIterator {
     fn creation_time(&self) -> Option<Time> {
-        None
+        None // this is not used in this form
     }
 
     fn artifact_name(&self) -> String {
-        String::from("")
+        String::from("") // this is not used in this form
     }
 
     fn has_next(&self) -> bool {
-        self.next_elem.is_none()
+        self.next_elem.is_none() // this is not used in this form
     }
 
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
@@ -90,14 +90,14 @@ impl FindDataUpdater for ConfigsIterator {
 impl K8sAsyncResource<NamedContext> for ConfigsIterator {}
 
 impl K8sClusterResourceIterator<NamedContext> for ConfigsIterator {
-    async fn list_cluster_resources() -> anyhow::Result<Vec<NamedContext>> {
+    async fn list_cluster_resources(config_name: &str) -> anyhow::Result<Vec<NamedContext>> {
         let config = Kubeconfig::read()?;
         let vec = config.contexts.iter().map(|ctx| ctx.clone()).collect();
         Ok(vec)
     }
-    fn get_resources() -> Vec<NamedContext> {
+    fn get_resources(config_name: &str) -> Vec<NamedContext> {
         let vec_empt: Vec<NamedContext> = Vec::new();
-        let runtime_res = Self::async_to_sync_res(Self::list_cluster_resources());
+        let runtime_res = Self::async_to_sync_res(Self::list_cluster_resources(config_name));
         runtime_res.unwrap_or_else(|_err| {
             eprintln!(
                 "Fail on getting cluster bound resource list {}",
@@ -110,7 +110,7 @@ impl K8sClusterResourceIterator<NamedContext> for ConfigsIterator {
 
 impl ConfigsIterator {
     pub fn new() -> Box<Self> {
-        let v = Self::get_resources();
+        let v = Self::get_resources("");
         Box::new(Self {
             it: Box::new(v.into_iter()),
             next_elem: None,

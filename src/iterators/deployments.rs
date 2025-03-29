@@ -50,21 +50,12 @@ impl FindDataUpdater for DeploymentsIterator {
 impl K8sAsyncResource<Deployment> for DeploymentsIterator {}
 
 impl K8sNamespaceResourceIterator<Deployment> for DeploymentsIterator {
-    async fn list_namespace_resources(namespace: &str) -> anyhow::Result<Vec<Deployment>> {
-        let config = Config::infer().await?;
-        let https = config.openssl_https_connector()?;
+    async fn list_namespace_resources(
+        config_name: &str,
+        namespace: &str,
+    ) -> anyhow::Result<Vec<Deployment>> {
+        let client = Self::create_kube_client(config_name, Some(namespace)).await?;
         let mut vec = Vec::new();
-        let service = ServiceBuilder::new()
-            .layer(config.base_uri_layer())
-            .option_layer(config.auth_layer()?)
-            .map_err(BoxError::from)
-            .service(
-                hyper_util::client::legacy::Client::builder(TokioExecutor::new()).build(https),
-            );
-        // .service(hyper::Client::builder().build(https));
-
-        let client = Client::new(service, namespace);
-
         let res_api: Api<Deployment> = Api::namespaced(client, &namespace);
         for p in res_api.list(&Default::default()).await? {
             vec.push(p.clone());
@@ -75,8 +66,8 @@ impl K8sNamespaceResourceIterator<Deployment> for DeploymentsIterator {
 }
 
 impl DeploymentsIterator {
-    pub fn new(namespace: &str) -> Box<Self> {
-        let v = Self::get_resources(namespace);
+    pub fn new(config_name: &str, namespace: &str) -> Box<Self> {
+        let v = Self::get_resources(config_name, namespace);
         Box::new(Self {
             it: Box::new(v.into_iter()),
             next_elem: None,

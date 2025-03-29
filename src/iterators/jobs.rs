@@ -1,11 +1,10 @@
 use super::FindDataUpdater;
 use crate::iterators::{K8sAsyncResource, K8sNamespaceResourceIterator, ResourceData};
-use hyper_util::rt::TokioExecutor;
 use k8s_openapi::api::batch::v1::Job;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
-use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
+use kube::{Api, ResourceExt};
 use std::iter::Iterator;
-use tower::{BoxError, ServiceBuilder};
+use tokio::time::{Duration, timeout};
 
 // JobsIterator: Iterator for job, similar to PodIterator
 pub struct JobsIterator {
@@ -52,33 +51,40 @@ impl FindDataUpdater for JobsIterator {
 impl K8sAsyncResource<Job> for JobsIterator {}
 
 impl K8sNamespaceResourceIterator<Job> for JobsIterator {
-    async fn list_namespace_resources(namespace: &str) -> anyhow::Result<Vec<Job>> {
-        let config = Config::infer().await?;
-        let https = config.openssl_https_connector()?;
-        let mut vec = Vec::new();
-        let service = ServiceBuilder::new()
-            .layer(config.base_uri_layer())
-            .option_layer(config.auth_layer()?)
-            .map_err(BoxError::from)
-            .service(
-                hyper_util::client::legacy::Client::builder(TokioExecutor::new()).build(https),
-            );
-        // .service(hyper::Client::builder().build(https));
-
-        let client = Client::new(service, namespace);
-
+    async fn list_namespace_resources(
+        config_name: &str,
+        namespace: &str,
+    ) -> anyhow::Result<Vec<Job>> {
+        let client = Self::create_kube_client(config_name, Some(namespace)).await?;
         let res_api: Api<Job> = Api::namespaced(client, &namespace);
-        for p in res_api.list(&Default::default()).await? {
-            vec.push(p.clone());
-            //info!("{}", p.name_any());
+        let timeout_duration = Duration::from_secs(10);
+        match timeout(timeout_duration, res_api.list(&Default::default())).await {
+            Ok(Ok(job_list)) => {
+                // The API call succeeded within the timeout
+                let mut vec = Vec::new();
+                for p in job_list {
+                    vec.push(p.clone());
+                }
+                Ok(vec)
+            }
+            Ok(Err(e)) => {
+                // The API call failed within the timeout
+                Err(e.into()) // Convert kube::Error to anyhow::Error
+            }
+            Err(_elapsed) => {
+                // The timeout elapsed
+                Err(anyhow::anyhow!(
+                    "Timeout while listing jobs in namespace '{}'",
+                    namespace
+                ))
+            }
         }
-        Ok(vec)
     }
 }
 
 impl JobsIterator {
-    pub fn new(namespace: &str) -> Box<Self> {
-        let v = Self::get_resources(namespace);
+    pub fn new(config_name: &str, namespace: &str) -> Box<Self> {
+        let v = Self::get_resources(config_name, namespace);
         Box::new(Self {
             it: Box::new(v.into_iter()),
             next_elem: None,

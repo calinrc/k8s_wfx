@@ -52,21 +52,9 @@ impl FindDataUpdater for NodesIterator {
 impl K8sAsyncResource<Node> for NodesIterator {}
 
 impl K8sClusterResourceIterator<Node> for NodesIterator {
-    async fn list_cluster_resources() -> anyhow::Result<Vec<Node>> {
-        let config = Config::infer().await?;
-        let https = config.openssl_https_connector()?;
+    async fn list_cluster_resources(config_name: &str) -> anyhow::Result<Vec<Node>> {
+        let client = Self::create_kube_client(config_name, None).await?;
         let mut vec = Vec::new();
-        let service = ServiceBuilder::new()
-            .layer(config.base_uri_layer())
-            .option_layer(config.auth_layer()?)
-            .map_err(BoxError::from)
-            .service(
-                hyper_util::client::legacy::Client::builder(TokioExecutor::new()).build(https),
-            );
-        // .service(hyper::Client::builder().build(https));
-
-        let client = Client::new(service, &config.default_namespace);
-
         let res_api: Api<Node> = Api::all(client);
         for p in res_api.list(&Default::default()).await? {
             vec.push(p.clone());
@@ -77,8 +65,8 @@ impl K8sClusterResourceIterator<Node> for NodesIterator {
 }
 
 impl NodesIterator {
-    pub fn new() -> Box<Self> {
-        let v = Self::get_resources();
+    pub fn new(config_name: &str) -> Box<Self> {
+        let v = Self::get_resources(config_name);
         Box::new(Self {
             it: Box::new(v.into_iter()),
             next_elem: None,
