@@ -1,4 +1,4 @@
-use super::FindDataUpdater;
+use super::FsDataHandler;
 use crate::consts;
 use crate::consts::FILETIME;
 use crate::consts::WIN32_FIND_DATAA;
@@ -6,6 +6,7 @@ use crate::iterators::{K8sAsyncResource, K8sClusterResourceIterator, ResourceDat
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::config::Kubeconfig;
 use kube::config::NamedContext;
+use std::path::Path;
 
 pub struct ConfigsIterator {
     it: Box<std::vec::IntoIter<NamedContext>>,
@@ -33,7 +34,7 @@ impl Iterator for ConfigsIterator {
     }
 }
 
-impl FindDataUpdater for ConfigsIterator {
+impl FsDataHandler for ConfigsIterator {
     fn creation_time(&self) -> Option<Time> {
         None // this is not used in this form
     }
@@ -85,6 +86,8 @@ impl FindDataUpdater for ConfigsIterator {
             None => println!("update_find_data on None Pods"),
         }
     }
+
+
 }
 
 impl K8sAsyncResource<NamedContext> for ConfigsIterator {}

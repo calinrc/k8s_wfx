@@ -1,8 +1,9 @@
+use std::path::Path;
 use crate::consts::WIN32_FIND_DATAA;
 use crate::iterators::ResourceData;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 
-use super::FindDataUpdater;
+use super::FsDataHandler;
 
 pub struct DummyIterator {}
 
@@ -24,7 +25,7 @@ impl Iterator for DummyIterator {
         None
     }
 }
-impl FindDataUpdater for DummyIterator {
+impl FsDataHandler for DummyIterator {
     fn creation_time(&self) -> Option<Time> {
         None
     }
@@ -38,4 +39,5 @@ impl FindDataUpdater for DummyIterator {
     }
 
     unsafe fn update_find_data(&self, _find_data: *mut WIN32_FIND_DATAA) {}
+
 }

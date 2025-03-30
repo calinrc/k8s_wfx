@@ -1,11 +1,12 @@
-use super::FindDataUpdater;
+use super::FsDataHandler;
 use crate::iterators::{K8sAsyncResource, K8sClusterResourceIterator, ResourceData};
-use hyper_util::rt::TokioExecutor;
 use k8s_openapi::api::core::v1::Namespace;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
-use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
+use kube::{Api, ResourceExt};
 use std::iter::Iterator;
-use tower::{BoxError, ServiceBuilder};
+use std::path::{Component, Path};
+use crate::helper;
+use crate::shareddata::GLOBAL_SHARED_DATA;
 
 // NamespaceIterator: Iterator for namespaces, similar to PodIterator
 pub struct NamespacesIterator {
@@ -32,7 +33,7 @@ impl Iterator for NamespacesIterator {
     }
 }
 
-impl FindDataUpdater for NamespacesIterator {
+impl FsDataHandler for NamespacesIterator {
     fn creation_time(&self) -> Option<Time> {
         self.next_elem.as_ref()?.creation_timestamp()
     }
@@ -46,6 +47,25 @@ impl FindDataUpdater for NamespacesIterator {
 
     fn has_next(&self) -> bool {
         !self.next_elem.is_none()
+    }
+
+    fn execute(&self, path: &Path, verb:&str ){
+        eprintln!("namespaces list execute path {} verb {}", path.to_str().unwrap_or(""), verb);
+        let components = helper::path_components(path);
+        let comp_count = components.len();
+        if comp_count == 3 {
+            let component = components[2];
+            match component {
+                Component::Normal(namespace) => {
+                    let mut shared_data = GLOBAL_SHARED_DATA.lock().unwrap();
+                    let ns = String::from(namespace.to_str().unwrap());
+                    shared_data.selected_namespace = ns.clone();
+                    eprintln!("Selected namespace {}", ns);
+                }
+                _ => {}
+            }
+
+        }
     }
 }
 

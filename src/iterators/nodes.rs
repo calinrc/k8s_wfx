@@ -1,11 +1,10 @@
-use super::FindDataUpdater;
+use super::FsDataHandler;
 use crate::iterators::{K8sAsyncResource, K8sClusterResourceIterator, ResourceData};
-use hyper_util::rt::TokioExecutor;
 use k8s_openapi::api::core::v1::Node;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
-use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
+use kube::{Api, ResourceExt};
 use std::iter::Iterator;
-use tower::{BoxError, ServiceBuilder};
+use std::path::Path;
 
 // NodesIterator: Iterator for node, similar to PodIterator
 pub struct NodesIterator {
@@ -32,7 +31,7 @@ impl Iterator for NodesIterator {
     }
 }
 
-impl FindDataUpdater for NodesIterator {
+impl FsDataHandler for NodesIterator {
     fn creation_time(&self) -> Option<Time> {
         self.next_elem.as_ref()?.creation_timestamp()
     }

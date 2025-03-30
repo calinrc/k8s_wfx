@@ -1,10 +1,9 @@
-use super::FindDataUpdater;
+use std::path::{Component, Path};
+use super::FsDataHandler;
 use crate::iterators::{K8sAsyncResource, K8sNamespaceResourceIterator, ResourceData};
-use hyper_util::rt::TokioExecutor;
 use k8s_openapi::api::apps::v1::Deployment;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
-use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
-use tower::{BoxError, ServiceBuilder};
+use kube::{Api, ResourceExt};
 
 pub struct DeploymentsIterator {
     it: Box<std::vec::IntoIter<Deployment>>,
@@ -30,7 +29,7 @@ impl Iterator for DeploymentsIterator {
     }
 }
 
-impl FindDataUpdater for DeploymentsIterator {
+impl FsDataHandler for DeploymentsIterator {
     fn creation_time(&self) -> Option<Time> {
         self.next_elem.as_ref()?.creation_timestamp()
     }

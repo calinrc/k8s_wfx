@@ -1,7 +1,8 @@
 use crate::consts::{FILETIME, WIN32_FIND_DATAA};
-use crate::iterators::{FindDataUpdater, ResourceData};
+use crate::iterators::{FsDataHandler, ResourceData};
 use crate::{consts, resources};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
+use std::path::Path;
 use std::slice::Iter;
 
 #[derive(Debug)]
@@ -34,7 +35,7 @@ impl Drop for StaticListResourcesIterator<'_> {
     }
 }
 
-impl FindDataUpdater for StaticListResourcesIterator<'_> {
+impl FsDataHandler for StaticListResourcesIterator<'_> {
     fn creation_time(&self) -> Option<Time> {
         None
     }
@@ -87,4 +88,5 @@ impl FindDataUpdater for StaticListResourcesIterator<'_> {
             }
         }
     }
+
 }

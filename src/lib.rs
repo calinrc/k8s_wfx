@@ -11,7 +11,7 @@ use consts::TLogProc;
 use consts::TProgressProc;
 use consts::TRequestProc;
 use consts::WIN32_FIND_DATAA;
-use iterators::FindDataUpdater;
+use iterators::FsDataHandler;
 use iterators::ResourcesIteratorFactory;
 use std::cell::RefCell;
 use std::ffi::CStr;
@@ -19,12 +19,13 @@ use std::ffi::CString;
 use std::ffi::c_char;
 use std::ffi::c_int;
 use std::path::Path;
+use shareddata::GLOBAL_SHARED_DATA;
 
 mod consts;
 mod helper;
 mod iterators;
 mod resources;
-
+mod shareddata;
 // File: lib.rs
 
 // For further reading ...
@@ -35,7 +36,7 @@ mod resources;
 // typedef BOOL (DCPCALL *tRequestProc)(int PluginNr,int RequestType,char* CustomTitle, char* CustomText,char* ReturnedText,int maxlen);
 // typedef int BOOL;
 
-thread_local!(static G_PLUGIN_NO: RefCell<Option<c_int>>  = RefCell::new(None));
+// thread_local!(static G_PLUGIN_NO: RefCell<Option<c_int>>  = RefCell::new(None));
 thread_local!(static G_PROGRESS_PROC: RefCell<Option<TProgressProc> >  = RefCell::new(None));
 thread_local!(static G_LOG_PROC: RefCell<Option<TLogProc> >  = RefCell::new(None));
 thread_local!(static G_REQUEST_PROC: RefCell<Option<TRequestProc> >  = RefCell::new(None));
@@ -48,9 +49,9 @@ pub unsafe extern "C" fn FsInit(
     p_request_proc: TRequestProc,
 ) -> c_int {
     eprintln!("FsInit enter");
-    G_PLUGIN_NO.with(|plug_no| {
-        *plug_no.borrow_mut() = Some(plugin_nr);
-    });
+    let mut shared_data = GLOBAL_SHARED_DATA.lock().unwrap();
+    shared_data.plugin_nr = plugin_nr;
+
     G_PROGRESS_PROC.with(|funcptr| {
         *funcptr.borrow_mut() = Some(p_progress_proc);
     });
@@ -87,8 +88,6 @@ pub unsafe extern "C" fn FsFindFirst(
         let path_str = CStr::from_ptr(path).to_string_lossy();
         eprintln!("FsFindFirst on path {}", path_str);
         let path = Path::new(path_str.as_ref());
-        let parent = path.parent();
-        eprintln!("Parent is none {}", parent.is_none());
         let mut rit = ResourcesIteratorFactory::new(path);
 
         let handle = match (*rit).next() {
@@ -111,7 +110,7 @@ pub unsafe extern "C" fn FsFindNext(hdl: HANDLE, find_data: *mut WIN32_FIND_DATA
     eprintln!("FsFindNext enter");
     let ret_val: c_int = {
         if hdl != INVALID_HANDLE {
-            let riit = hdl as *mut Box<dyn FindDataUpdater>;
+            let riit = hdl as *mut Box<dyn FsDataHandler>;
             //= hdl as *mut Box<ResourcesIterator>;
             //let mut riit: ManuallyDrop<Box<ResourcesIterator>> = unsafe { (hdl as ManuallyDrop<Box<ResourcesIterator>>) };
             //as *mut ResourcesIterator;
@@ -144,7 +143,7 @@ pub unsafe extern "C" fn FsFindClose(hdl: HANDLE) -> c_int {
     //    ManuallyDrop::into_inner(&mdrit);
     if hdl != INVALID_HANDLE {
         unsafe {
-            let _ = Box::from_raw(hdl as *mut Box<dyn FindDataUpdater>);
+            let _ = Box::from_raw(hdl as *mut Box<dyn FsDataHandler>);
         }
     }
     eprintln!("FsFindClose exit");
@@ -208,6 +207,13 @@ pub unsafe extern "C" fn FsExecuteFile(
     _verb: *mut c_char,
 ) -> c_int {
     eprintln!("FsExecuteFile enter");
+    let remote_name_str = CStr::from_ptr(_remote_name).to_string_lossy();
+    let verb_str = CStr::from_ptr(_verb).to_string_lossy();
+
+    eprintln!("FsExecuteFile on path {} with verb {}", remote_name_str, verb_str);
+    let path = Path::new(remote_name_str.as_ref());
+    let rit = ResourcesIteratorFactory::new(&path);
+    rit.execute(&path, verb_str.as_ref());
     eprintln!("FsExecuteFile exit");
     FS_EXEC_OK
 }
@@ -269,19 +275,4 @@ pub unsafe extern "C" fn FsGetDefRootName(def_root_name: *mut c_char, maxlen: c_
         std::ptr::write(def_root_name.offset(len as isize) as *mut u8, 0u8);
     }
     eprintln!("FsGetDefRootName exit");
-}
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
 }

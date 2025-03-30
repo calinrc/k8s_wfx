@@ -1,9 +1,10 @@
-use super::FindDataUpdater;
+use super::FsDataHandler;
 use crate::iterators::{K8sAsyncResource, K8sNamespaceResourceIterator, ResourceData};
 use k8s_openapi::api::batch::v1::Job;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::{Api, ResourceExt};
 use std::iter::Iterator;
+use std::path::Path;
 use tokio::time::{Duration, timeout};
 
 // JobsIterator: Iterator for job, similar to PodIterator
@@ -31,7 +32,7 @@ impl Iterator for JobsIterator {
     }
 }
 
-impl FindDataUpdater for JobsIterator {
+impl FsDataHandler for JobsIterator {
     fn creation_time(&self) -> Option<Time> {
         self.next_elem.as_ref()?.creation_timestamp()
     }

@@ -7,6 +7,7 @@ use crate::iterators::namespaces::NamespacesIterator;
 use crate::iterators::nodes::NodesIterator;
 use crate::iterators::pods::PodsIterator;
 use crate::iterators::static_resource::StaticListResourcesIterator;
+use crate::shareddata::GLOBAL_SHARED_DATA;
 use crate::{consts, helper, resources};
 use core::future::Future;
 use hyper_util::rt::TokioExecutor;
@@ -33,7 +34,7 @@ mod static_resource;
 #[derive(Debug, Default)]
 pub struct ResourceData;
 
-pub trait FindDataUpdater: Iterator<Item = ResourceData> {
+pub trait FsDataHandler: Iterator<Item = ResourceData> {
     fn creation_time(&self) -> Option<Time>;
 
     fn artifact_name(&self) -> String;
@@ -82,27 +83,32 @@ pub trait FindDataUpdater: Iterator<Item = ResourceData> {
             println!("update_find_data on None")
         }
     }
+
+    fn execute(&self, path: &Path, verb: &str) {
+        eprintln!(
+            "execute path {} verb {}",
+            path.to_str().unwrap_or("unknown"),
+            verb
+        );
+    }
 }
 
 pub struct ResourcesIteratorFactory;
 
 impl ResourcesIteratorFactory {
-    pub fn new(_path: &Path) -> Box<dyn FindDataUpdater> {
-        let filtered_components = _path.components().filter(|c| match c {
-            Component::Normal(_) => true,
-            _ => false,
-        });
-        let components = filtered_components.collect::<Vec<_>>();
+
+    pub fn new(_path: &Path) -> Box<dyn FsDataHandler> {
+        let components = helper::path_components(_path);
         let comp_count = components.len();
         match comp_count {
             0 => ConfigsIterator::new(),
-            1 => Self::handle_resources_component(components),
-            2 => Self::handle_detailed_component(components),
-            _ => DummyIterator::new(),
+            1 => Self::handle_resources_component(&components),
+            _ => Self::handle_detailed_component(&components),
+            // _ => DummyIterator::new(),
         }
     }
 
-    fn handle_resources_component(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
+    fn handle_resources_component(components: &Vec<Component>) -> Box<dyn FsDataHandler> {
         let component = components[0];
         match component {
             Component::Normal(_) => StaticListResourcesIterator::new(),
@@ -110,10 +116,12 @@ impl ResourcesIteratorFactory {
         }
     }
 
-    fn handle_detailed_component(components: Vec<Component>) -> Box<dyn FindDataUpdater> {
+    fn handle_detailed_component(components: &Vec<Component>) -> Box<dyn FsDataHandler> {
         let _config_part = components[0];
         let resource_part = components[1];
-        let ns = String::from("kube-system");
+        // let ns = String::from("kube-system");
+        let shared_data = GLOBAL_SHARED_DATA.lock().unwrap();
+        let ns = shared_data.selected_namespace.clone();
         match (resource_part, _config_part) {
             (Component::Normal(res_name), Component::Normal(config_name)) => {
                 let conf_name = config_name.to_str().unwrap();

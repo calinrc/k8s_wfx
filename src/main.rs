@@ -7,6 +7,7 @@ mod consts;
 mod helper;
 mod iterators;
 mod resources;
+mod shareddata;
 
 fn main() {
     println!("Start");

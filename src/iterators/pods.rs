@@ -1,12 +1,11 @@
-use super::FindDataUpdater;
+use std::path::{Component, Path};
+use super::FsDataHandler;
 use crate::iterators::{K8sAsyncResource, K8sNamespaceResourceIterator, ResourceData};
-use hyper_util::rt::TokioExecutor;
 use k8s_openapi::api::core::v1::Pod;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
-use kube::{Api, Client, Config, ResourceExt, client::ConfigExt};
+use kube::{Api, ResourceExt};
 use std::time::Duration;
 use tokio::time::timeout;
-use tower::{BoxError, ServiceBuilder};
 
 pub struct PodsIterator {
     it: Box<std::vec::IntoIter<Pod>>,
@@ -32,7 +31,7 @@ impl Iterator for PodsIterator {
     }
 }
 
-impl FindDataUpdater for PodsIterator {
+impl FsDataHandler for PodsIterator {
     fn creation_time(&self) -> Option<Time> {
         self.next_elem.as_ref()?.creation_timestamp()
     }
