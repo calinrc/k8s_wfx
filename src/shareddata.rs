@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
-use std::sync::Mutex;
 use std::ffi::c_int;
+use std::sync::Mutex;
 
 #[derive(Debug, Clone, Default)]
 pub struct SharedData {
@@ -16,7 +16,6 @@ impl SharedData {
         }
     }
 }
-
 
 lazy_static! {
     pub static ref GLOBAL_SHARED_DATA: Mutex<SharedData> = Mutex::new(SharedData::new());

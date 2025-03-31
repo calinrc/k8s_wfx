@@ -1,4 +1,3 @@
-use std::path::{Component, Path};
 use super::FsDataHandler;
 use crate::iterators::{K8sAsyncResource, K8sNamespaceResourceIterator, ResourceData};
 use k8s_openapi::api::core::v1::Pod;

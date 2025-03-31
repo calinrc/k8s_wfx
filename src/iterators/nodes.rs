@@ -4,7 +4,6 @@ use k8s_openapi::api::core::v1::Node;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::{Api, ResourceExt};
 use std::iter::Iterator;
-use std::path::Path;
 
 // NodesIterator: Iterator for node, similar to PodIterator
 pub struct NodesIterator {

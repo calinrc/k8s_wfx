@@ -18,7 +18,6 @@ use kube::{
     Client,
     config::{Config, KubeConfigOptions, Kubeconfig},
 };
-use std::error::Error;
 use std::path::{Component, Path};
 use tower::{BoxError, ServiceBuilder};
 
@@ -42,61 +41,87 @@ pub trait FsDataHandler: Iterator<Item = ResourceData> {
     fn has_next(&self) -> bool;
 
     unsafe fn update_find_data(&self, find_data: *mut WIN32_FIND_DATAA) {
-        if self.has_next() {
-            let creation_time_opt = self.creation_time();
-            let name = self.artifact_name();
-            let ct = creation_time_opt
-                .clone()
-                .map(|ts| helper::to_split_file_time(ts.0.timestamp_millis()))
-                .map(|(l, h)| FILETIME::new(l as u32, h as u32))
-                .unwrap_or(FILETIME::default());
-            (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE;
-            (*find_data).ft_creation_time = ct;
-            (*find_data).ft_last_access_time = ct;
-            (*find_data).ft_last_write_time = ct;
-            (*find_data).n_file_size_high = 0;
-            (*find_data).n_file_size_low = 0;
-            (*find_data).dw_reserved_0 = 0;
-            (*find_data).dw_reserved_1 = 0;
-            let bytes = name.as_bytes();
-            let len = bytes.len();
+        unsafe {
+            if self.has_next() {
+                let creation_time_opt = self.creation_time();
+                let name = self.artifact_name();
+                let ct = creation_time_opt
+                    .clone()
+                    .map(|ts| helper::to_split_file_time(ts.0.timestamp_millis()))
+                    .map(|(l, h)| FILETIME::new(l as u32, h as u32))
+                    .unwrap_or(FILETIME::default());
+                (*find_data).dw_file_attributes = consts::FILE_ATTRIBUTE_UNIX_MODE;
+                (*find_data).ft_creation_time = ct;
+                (*find_data).ft_last_access_time = ct;
+                (*find_data).ft_last_write_time = ct;
+                (*find_data).n_file_size_high = 0;
+                (*find_data).n_file_size_low = 0;
+                (*find_data).dw_reserved_0 = 0;
+                (*find_data).dw_reserved_1 = 0;
+                let bytes = name.as_bytes();
+                let len = bytes.len();
 
-            unsafe {
                 std::ptr::copy(
                     bytes.as_ptr().cast(),
                     (*find_data).c_file_name.as_mut_ptr(),
                     consts::MAX_PATH,
-                )
-            };
-            unsafe {
+                );
                 std::ptr::write(
                     (*find_data).c_file_name.as_mut_ptr().offset(len as isize) as *mut u8,
                     0u8,
-                )
-            };
+                );
 
-            //(*find_data).c_file_name= [0i8;260];
-            (*find_data).c_alternate_file_name = [0i8; 14];
+                //(*find_data).c_file_name= [0i8;260];
+                (*find_data).c_alternate_file_name = [0i8; 14];
 
-            println!("Resource {}", name)
-        } else {
-            println!("update_find_data on None")
+                println!("Resource {}", name)
+            } else {
+                println!("update_find_data on None")
+            }
         }
     }
 
-    fn execute(&self, path: &Path, verb: &str) {
+    fn fs_execute(&self, path: &Path, verb: &str) -> anyhow::Result<()>{
         eprintln!(
             "execute path {} verb {}",
             path.to_str().unwrap_or("unknown"),
             verb
         );
+        Ok(())
+    }
+
+    fn fs_get(&self, remote_path: &Path, local_path: &Path, flags:i32) -> anyhow::Result<()> {
+        eprintln!(
+            "get remote path {} using local  {} and flags {}",
+            remote_path.to_str().unwrap_or("unknown"),
+            local_path.to_str().unwrap_or("unknown"),
+            flags
+        );
+        Ok(())
+    }
+
+    fn fs_put(&self, remote_path: &Path, local_path: &Path, flags:i32) -> anyhow::Result<()> {
+        eprintln!(
+            "put remote path {} using local  {} and flags {}",
+            remote_path.to_str().unwrap_or("unknown"),
+            local_path.to_str().unwrap_or("unknown"),
+            flags
+        );
+        Ok(())
+    }
+
+    fn fs_delete(&self, remote_path: &Path) -> anyhow::Result<()> {
+        eprintln!(
+            "delete remote path {}",
+            remote_path.to_str().unwrap_or("unknown"),
+        );
+        Ok(())
     }
 }
 
 pub struct ResourcesIteratorFactory;
 
 impl ResourcesIteratorFactory {
-
     pub fn new(_path: &Path) -> Box<dyn FsDataHandler> {
         let components = helper::path_components(_path);
         let comp_count = components.len();
@@ -157,7 +182,7 @@ trait K8sAsyncResource<T> {
         config_name: &str,
     ) -> Result<Config, KubeconfigError> {
         // Find the NamedContext with the matching name
-        let named_context = kubeconfig
+        let _named_context = kubeconfig
             .contexts
             .iter()
             .find(|nc| nc.name == config_name)

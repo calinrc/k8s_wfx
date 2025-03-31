@@ -4,7 +4,6 @@ use k8s_openapi::api::batch::v1::Job;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::{Api, ResourceExt};
 use std::iter::Iterator;
-use std::path::Path;
 use tokio::time::{Duration, timeout};
 
 // JobsIterator: Iterator for job, similar to PodIterator

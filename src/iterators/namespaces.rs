@@ -1,12 +1,12 @@
 use super::FsDataHandler;
+use crate::helper;
 use crate::iterators::{K8sAsyncResource, K8sClusterResourceIterator, ResourceData};
+use crate::shareddata::GLOBAL_SHARED_DATA;
 use k8s_openapi::api::core::v1::Namespace;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::{Api, ResourceExt};
 use std::iter::Iterator;
 use std::path::{Component, Path};
-use crate::helper;
-use crate::shareddata::GLOBAL_SHARED_DATA;
 
 // NamespaceIterator: Iterator for namespaces, similar to PodIterator
 pub struct NamespacesIterator {
@@ -49,8 +49,12 @@ impl FsDataHandler for NamespacesIterator {
         !self.next_elem.is_none()
     }
 
-    fn execute(&self, path: &Path, verb:&str ){
-        eprintln!("namespaces list execute path {} verb {}", path.to_str().unwrap_or(""), verb);
+    fn fs_execute(&self, path: &Path, verb: &str) -> anyhow::Result<()>{
+        eprintln!(
+            "namespaces list execute path {} verb {}",
+            path.to_str().unwrap_or(""),
+            verb
+        );
         let components = helper::path_components(path);
         let comp_count = components.len();
         if comp_count == 3 {
@@ -64,8 +68,8 @@ impl FsDataHandler for NamespacesIterator {
                 }
                 _ => {}
             }
-
         }
+        Ok(())
     }
 }
 

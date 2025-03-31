@@ -6,13 +6,13 @@ use std::ffi::c_void;
 pub const FS_FILE_OK: c_int = 0;
 // pub const FS_FILE_EXISTS: c_int = 1;
 // pub const FS_FILE_NOTFOUND: c_int = 2;
-// pub const FS_FILE_READERROR: c_int = 3;
-// pub const FS_FILE_WRITEERROR: c_int = 4;
+pub const FS_FILE_READERROR: c_int = 3;
+pub const FS_FILE_WRITEERROR: c_int = 4;
 // pub const FS_FILE_USERABORT: c_int = 5;
 // pub const FS_FILE_NOTSUPPORTED: c_int = 6;
-// pub const FS_FILE_EXISTSRESUMEALLOWED: c_int = 7;
+pub const FS_FILE_EXISTSRESUMEALLOWED: c_int = 7;
 pub const FS_EXEC_OK: c_int = 0;
-// pub const FS_EXEC_ERROR: c_int = 1;
+pub const FS_EXEC_ERROR: c_int = 1;
 // pub const FS_EXEC_YOURSELF: c_int = -1;
 // pub const FS_EXEC_SYMLINK: c_int = -2;
 // pub const FS_COPYFLAGS_OVERWRITE: c_int = 1;
@@ -129,7 +129,7 @@ impl FILETIME {
 }
 
 pub const MAX_PATH: usize = 260;
-pub type BOOL = c_uint;
+pub type BOOL = c_int;
 
 // #[repr(C)]
 

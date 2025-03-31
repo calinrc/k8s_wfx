@@ -1,7 +1,5 @@
 use consts::BOOL;
 use consts::FILETIME;
-use consts::FS_EXEC_OK;
-use consts::FS_FILE_OK;
 use consts::FsDefaultParamStruct;
 use consts::HANDLE;
 use consts::HWND;
@@ -11,15 +9,19 @@ use consts::TLogProc;
 use consts::TProgressProc;
 use consts::TRequestProc;
 use consts::WIN32_FIND_DATAA;
+use consts::{
+    FS_EXEC_ERROR, FS_EXEC_OK, FS_FILE_EXISTSRESUMEALLOWED, FS_FILE_OK, FS_FILE_READERROR,
+    FS_FILE_WRITEERROR,
+};
 use iterators::FsDataHandler;
 use iterators::ResourcesIteratorFactory;
+use shareddata::GLOBAL_SHARED_DATA;
 use std::cell::RefCell;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::ffi::c_char;
 use std::ffi::c_int;
 use std::path::Path;
-use shareddata::GLOBAL_SHARED_DATA;
 
 mod consts;
 mod helper;
@@ -185,8 +187,33 @@ pub unsafe extern "C" fn FsGetFile(
     _ri: *mut RemoteInfoStruct,
 ) -> c_int {
     eprintln!("FsGetFile enter");
-    eprintln!("FsGetFile exit");
-    FS_FILE_OK
+    unsafe {
+        let remote_name_str = CStr::from_ptr(_remote_name).to_string_lossy();
+        let local_name_str = CStr::from_ptr(_local_name).to_string_lossy();
+
+        eprintln!(
+            "FsGetFile on remote name {} into local_name {} flags {}",
+            remote_name_str, local_name_str, _copy_flags
+        );
+
+        let remote_path = Path::new(remote_name_str.as_ref());
+        let local_path = Path::new(local_name_str.as_ref());
+
+        if _copy_flags == 0 && local_path.exists() {
+            eprintln!("FsGetFile exit FS_FILE_EXISTSRESUMEALLOWED");
+            FS_FILE_EXISTSRESUMEALLOWED
+        } else {
+            let rit = ResourcesIteratorFactory::new(&remote_path);
+            let ret_val = rit.fs_get(&remote_path, &local_path, _copy_flags);
+            if (ret_val.is_ok()) {
+                eprintln!("FsGetFile exit FS_FILE_OK");
+                FS_FILE_OK
+            } else {
+                eprintln!("FsGetFile exit FS_FILE_READERROR");
+                FS_FILE_READERROR
+            }
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -196,8 +223,33 @@ pub unsafe extern "C" fn FsPutFile(
     _copy_flags: c_int,
 ) -> c_int {
     eprintln!("FsPutFile enter");
-    eprintln!("FsPutFile exit");
-    FS_FILE_OK
+    unsafe {
+        let remote_name_str = CStr::from_ptr(_remote_name).to_string_lossy();
+        let local_name_str = CStr::from_ptr(_local_name).to_string_lossy();
+
+        eprintln!(
+            "FsPutFile on remote name {} into local_name {} flags {}",
+            remote_name_str, local_name_str, _copy_flags
+        );
+
+        let remote_path = Path::new(remote_name_str.as_ref());
+        let local_path = Path::new(local_name_str.as_ref());
+
+        if _copy_flags == 0 && remote_path.exists() {
+            eprintln!("FsPutFile exit FS_FILE_EXISTSRESUMEALLOWED");
+            FS_FILE_EXISTSRESUMEALLOWED
+        } else {
+            let rit = ResourcesIteratorFactory::new(&remote_path);
+            let ret_val = rit.fs_put(&remote_path, &local_path, _copy_flags);
+            if (ret_val.is_ok()) {
+                eprintln!("FsPutFile exit FS_FILE_OK");
+                FS_FILE_OK
+            } else {
+                eprintln!("FsPutFile exit FS_FILE_WRITEERROR");
+                FS_FILE_WRITEERROR
+            }
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -206,23 +258,48 @@ pub unsafe extern "C" fn FsExecuteFile(
     _remote_name: *mut c_char,
     _verb: *mut c_char,
 ) -> c_int {
-    eprintln!("FsExecuteFile enter");
-    let remote_name_str = CStr::from_ptr(_remote_name).to_string_lossy();
-    let verb_str = CStr::from_ptr(_verb).to_string_lossy();
+    unsafe {
+        eprintln!("FsExecuteFile enter");
+        let remote_name_str = CStr::from_ptr(_remote_name).to_string_lossy();
+        let verb_str = CStr::from_ptr(_verb).to_string_lossy();
 
-    eprintln!("FsExecuteFile on path {} with verb {}", remote_name_str, verb_str);
-    let path = Path::new(remote_name_str.as_ref());
-    let rit = ResourcesIteratorFactory::new(&path);
-    rit.execute(&path, verb_str.as_ref());
-    eprintln!("FsExecuteFile exit");
-    FS_EXEC_OK
+        eprintln!(
+            "FsExecuteFile on path {} with verb {}",
+            remote_name_str, verb_str
+        );
+        let path = Path::new(remote_name_str.as_ref());
+        let rit = ResourcesIteratorFactory::new(&path);
+        let ret_val = rit.fs_execute(&path, verb_str.as_ref());
+        if (ret_val.is_ok()) {
+            eprintln!("FsExecuteFile exit FS_EXEC_OK");
+            FS_EXEC_OK
+        } else {
+            eprintln!("FsExecuteFile exit FS_EXEC_ERROR");
+            FS_EXEC_ERROR
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn FsDeleteFile(_remote_name: *mut c_char) -> BOOL {
     eprintln!("FsDeleteFile enter");
-    eprintln!("FsDeleteFile exit");
-    0
+    unsafe {
+        let remote_name_str = CStr::from_ptr(_remote_name).to_string_lossy();
+
+        eprintln!("FsDeleteFile on remote name {}", remote_name_str);
+
+        let remote_path = Path::new(remote_name_str.as_ref());
+
+        let rit = ResourcesIteratorFactory::new(&remote_path);
+        let ret_val = rit.fs_delete(&remote_path);
+        if (ret_val.is_ok()) {
+            eprintln!("FsDeleteFile exit FS_FILE_OK");
+            FS_FILE_OK
+        } else {
+            eprintln!("FsDeleteFile exit FS_FILE_WRITEERROR");
+            FS_FILE_WRITEERROR
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
