@@ -168,9 +168,9 @@ impl ResourcesIteratorFactory {
 }
 
 trait K8sAsyncResource<T> {
-    fn async_to_sync_res(
-        future: impl Future<Output = anyhow::Result<Vec<T>>>,
-    ) -> anyhow::Result<Vec<T>> {
+    fn async_to_sync_res<V>(
+        future: impl Future<Output = anyhow::Result<V>>,
+    ) -> anyhow::Result<V> {
         let runtime_res = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build();
