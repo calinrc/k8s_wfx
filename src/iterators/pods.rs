@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::Write;
 use std::path::{Component, Path};
 use super::FsDataHandler;
 use crate::iterators::{K8sAsyncResource, K8sNamespaceResourceIterator, ResourceData};
@@ -78,7 +80,22 @@ impl FsDataHandler for PodsIterator {
             local_path.to_str().unwrap_or("unknown"),
             flags
         );
-        Self::async_to_sync_res(self.fs_get_async(remote_path))
+        let yaml_pod_result = Self::async_to_sync_res(self.fs_get_async(remote_path));
+        if yaml_pod_result.is_ok(){
+            let yaml_str = yaml_pod_result.unwrap();
+            if !yaml_str.is_empty() {
+                // ... write to file
+                let mut file = File::create(local_path)?;
+                file.write_all(yaml_str.as_bytes())?;
+                eprintln!("Successfully wrote YAML to {}", local_path.to_str().unwrap_or("unknown path"));
+            } else {
+                eprintln!("No YAML content to write for remote path {}", remote_path.to_str().unwrap_or("unknown"));
+            }
+            Ok(())
+        }else{
+            Err(yaml_pod_result.err().unwrap())
+        }
+        
     }
 
    
@@ -128,28 +145,26 @@ impl PodsIterator {
     }
 
 
-    async fn fs_get_async(&self, remote_path: &Path,)-> anyhow::Result<()> {
+    async fn fs_get_async(&self, remote_path: &Path,)-> anyhow::Result<(String)> {
         let components = helper::path_components(remote_path);
         let comp_count = components.len();
         let shared_data = GLOBAL_SHARED_DATA.lock().unwrap();
         let ns = shared_data.selected_namespace.clone();
         if comp_count >2 {
             let config_name_component = components[0];
-            let pod_name = components[2];
-            match (pod_name, config_name_component){
+            let pod_name_component = components[2];
+            match (pod_name_component, config_name_component){
                 (Component::Normal(name), Component::Normal(config_name)) => {
                     let conf_name = config_name.to_str().unwrap();
+                    let pod_name = name.to_str().unwrap();
                     let client = Self::create_kube_client(conf_name, Some(ns.as_str())).await?;
                     let res_api: Api<Pod> = Api::namespaced(client, &ns);
                     let timeout_duration = Duration::from_secs(10);
-                    match timeout(timeout_duration, res_api.list(&Default::default())).await {
-                        Ok(Ok(job_list)) => {
+                    match timeout(timeout_duration, res_api.get(pod_name)).await {
+                        Ok(Ok(pod)) => {
                             // The API call succeeded within the timeout
-                            let mut vec = Vec::new();
-                            for p in job_list {
-                                vec.push(p.clone());
-                            }
-                            Ok(())
+                            let yaml = serde_yaml::to_string(&pod).unwrap();
+                            Ok((yaml))
                         }
                         Ok(Err(e)) => {
                             // The API call failed within the timeout
@@ -164,10 +179,10 @@ impl PodsIterator {
                         }
                     }
                 },
-                _ => Ok(())
+                _ => Ok(("".to_string()))
             }
         }else{
-            Ok(())
+            Ok(("".to_string()))
         }
     }
     
